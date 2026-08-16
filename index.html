@@ -1,0 +1,1472 @@
+<title>Training, Not Healing</title>
+<style>
+/* ============================================================
+   TOKENS — dark-first (this app gets used at 3am, in the dark).
+   :root carries the COMPLETE dark palette. Light is redefined
+   for prefers-color-scheme:light (unless the viewer explicitly
+   stamped dark) and again for [data-theme="light"].
+   ============================================================ */
+:root{
+  --ground:#0A1519; --surface:#122228; --surface-2:#182F36; --surface-3:#1F3A42;
+  --line:#22424B; --line-soft:#1A333A;
+  --ink:#E7F1F2; --ink-2:#A2BABE; --ink-3:#6D8C93;
+  --accent:#7FD1D8; --accent-ink:#0A1519; --accent-soft:#1B3D44;
+  --sand:#F0B67F; --sand-soft:#3A2E22;
+  --good:#6FCF8E; --warn:#EFC05A; --crit:#EF6F61;
+  --good-bg:#153027; --warn-bg:#332B14; --crit-bg:#3A1F1C;
+  --grid:#1C3840;
+  /* sticker dots — validated for this surface (band + contrast pass).
+     Identity is carried by FIXED SLOT POSITION as well as hue. */
+  --d-green:#2F9E68; --d-blue:#3E8FD8; --d-yellow:#B4890F;
+  --d-red:#DC4B45;   --d-purple:#8B5CD6; --d-orange:#CB6320;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.28);
+  --serif:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --r-sm:6px; --r:10px; --r-lg:16px; --pad:16px; --tabbar:66px;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --ground:#EBF0EF; --surface:#FFFFFF; --surface-2:#F2F6F6; --surface-3:#E6EEEE;
+    --line:#CBDBDB; --line-soft:#DEE8E8;
+    --ink:#08181D; --ink-2:#456067; --ink-3:#6C868C;
+    --accent:#0C6E78; --accent-ink:#FFFFFF; --accent-soft:#DCEEF0;
+    --sand:#9A5A20; --sand-soft:#F6E8D9;
+    --good:#227A50; --warn:#8A6410; --crit:#B23A30;
+    --good-bg:#DFF0E7; --warn-bg:#F7EBD2; --crit-bg:#F8E1DE;
+    --grid:#DCE7E7;
+    --d-green:#2E9A66; --d-blue:#2F7FC9; --d-yellow:#8F6C0E;
+    --d-red:#C33B35;   --d-purple:#7B4FC9; --d-orange:#B0561B;
+    --shadow:0 1px 2px rgba(10,40,45,.06), 0 8px 24px rgba(10,40,45,.08);
+  }
+}
+:root[data-theme="light"]{
+  --ground:#EBF0EF; --surface:#FFFFFF; --surface-2:#F2F6F6; --surface-3:#E6EEEE;
+  --line:#CBDBDB; --line-soft:#DEE8E8;
+  --ink:#08181D; --ink-2:#456067; --ink-3:#6C868C;
+  --accent:#0C6E78; --accent-ink:#FFFFFF; --accent-soft:#DCEEF0;
+  --sand:#9A5A20; --sand-soft:#F6E8D9;
+  --good:#227A50; --warn:#8A6410; --crit:#B23A30;
+  --good-bg:#DFF0E7; --warn-bg:#F7EBD2; --crit-bg:#F8E1DE;
+  --grid:#DCE7E7;
+  --d-green:#2E9A66; --d-blue:#2F7FC9; --d-yellow:#8F6C0E;
+  --d-red:#C33B35;   --d-purple:#7B4FC9; --d-orange:#B0561B;
+  --shadow:0 1px 2px rgba(10,40,45,.06), 0 8px 24px rgba(10,40,45,.08);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-bottom:calc(var(--tabbar) + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:960px;margin:0 auto;padding:0 var(--pad)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- header ---------- */
+header{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--ground) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line-soft)}
+.hd{display:flex;align-items:center;gap:12px;padding:10px 0 11px}
+.hd h1{font-family:var(--serif);font-weight:600;font-size:18px;margin:0;letter-spacing:-.01em;
+  flex:1;line-height:1.15;text-wrap:balance}
+.hd h1 small{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:500;margin-bottom:3px}
+.countdown{text-align:right;font-family:var(--mono);line-height:1.1;flex:none}
+.countdown b{display:block;font-size:20px;color:var(--sand);font-weight:600;font-variant-numeric:tabular-nums}
+.countdown span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.iconbtn{background:none;border:1px solid var(--line);border-radius:var(--r-sm);width:32px;height:32px;
+  display:grid;place-items:center;flex:none;color:var(--ink-2);font-size:14px}
+.iconbtn:hover{background:var(--surface-2);color:var(--ink)}
+.rail{height:3px;background:var(--line-soft);position:relative;overflow:hidden}
+.rail i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--accent-soft),var(--accent));display:block}
+
+/* ---------- generic ---------- */
+.screen{display:none;padding-top:18px}
+.screen.on{display:block}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.eyebrow::after{content:"";height:1px;flex:1;background:var(--line-soft)}
+h2.sec{font-family:var(--serif);font-size:20px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--ink-2);font-size:13.5px;margin:0 0 14px;max-width:62ch}
+.card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  padding:16px;box-shadow:var(--shadow)}
+.stack{display:flex;flex-direction:column;gap:14px}
+.muted{color:var(--ink-3)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---------- capture ---------- */
+.quickrow{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px}
+.quick{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;
+  padding:8px 14px;font-size:13px;font-weight:550;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.quick:hover{border-color:var(--accent);background:var(--accent-soft)}
+.quick span{font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;margin-bottom:22px}
+.tile{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  padding:11px 9px 10px;text-align:left;display:flex;flex-direction:column;gap:5px;min-height:112px;
+  position:relative;transition:transform .1s ease,border-color .1s ease}
+.tile:hover{border-color:var(--accent);transform:translateY(-1px)}
+.tile .em{font-size:21px;line-height:1}
+.tile .nm{font-size:11.5px;font-weight:600;line-height:1.25}
+.tile .cm{font-size:10px;color:var(--ink-3);line-height:1.3;margin-top:-2px}
+.tile .ds{margin-top:auto;font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+.tile .strip{position:absolute;left:0;top:11px;bottom:11px;width:2px;border-radius:2px}
+.tile .earns{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%}
+
+/* ---------- sheet ---------- */
+.scrim{position:fixed;inset:0;background:rgba(4,12,15,.62);z-index:60;display:none}
+.scrim.on{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--surface);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;border-top:1px solid var(--line);
+  padding:18px var(--pad) calc(20px + env(safe-area-inset-bottom,0px));
+  max-width:960px;margin:0 auto;display:none;max-height:88vh;overflow-y:auto}
+.sheet.on{display:block}
+.sheet h3{margin:0 0 2px;font-family:var(--serif);font-size:19px;font-weight:600}
+.sheet .sh-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 16px;font-family:var(--mono)}
+.field{margin-bottom:13px}
+.field label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+input,select,textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);
+  border-radius:var(--r-sm);padding:10px 11px;font-family:var(--sans);font-size:15px}
+input[type=time],input[type=date],input[type=number]{font-family:var(--mono)}
+textarea{resize:vertical;min-height:60px;font-size:14px}
+.stepper{display:flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.stepper button{background:var(--surface-2);border:0;width:52px;font-size:20px;color:var(--ink-2);line-height:1}
+.stepper button:hover{background:var(--surface-3);color:var(--ink)}
+.stepper input{border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);
+  border-radius:0;text-align:center;font-size:17px;font-weight:600;background:var(--surface)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;background:var(--accent);color:var(--accent-ink);border:0;border-radius:var(--r-sm);
+  padding:13px;font-weight:650;font-size:15px}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--ink-2)}
+.btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
+.btn.danger{background:none;border:1px solid var(--crit);color:var(--crit)}
+.btnrow{display:flex;gap:9px;margin-top:6px}
+
+/* ---------- pills ---------- */
+.pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;
+  padding:2px 7px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good);border-color:var(--good)}
+.pill.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.pill.crit{background:var(--crit-bg);color:var(--crit);border-color:var(--crit)}
+.pill.neutral{background:var(--surface-2);color:var(--ink-3);border-color:var(--line)}
+.pill.accent{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+
+/* ══════════ BOARD ══════════ */
+.identity{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  padding:15px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.identity .id-t{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.01em;flex:1;min-width:190px}
+.identity .id-t em{font-style:normal;color:var(--ink-3);display:block;font-family:var(--mono);
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px}
+.identity .out{font-family:var(--mono);text-align:right}
+.identity .out b{display:block;font-size:26px;color:var(--accent);font-weight:600}
+.identity .out span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+
+/* today card */
+.todaycard{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  padding:16px;box-shadow:var(--shadow)}
+.todayhd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:13px}
+.todayhd h3{font-family:var(--serif);font-size:18px;margin:0;font-weight:600}
+.todayhd .sp{flex:1}
+.xrow{display:flex;align-items:center;gap:11px;padding:11px 12px;background:var(--surface-2);
+  border:1px solid var(--line-soft);border-radius:var(--r);margin-bottom:12px}
+.xrow .xbox{width:30px;height:30px;border:2px solid var(--line);border-radius:var(--r-sm);flex:none;
+  display:grid;place-items:center;font-size:17px;font-weight:700;color:transparent;background:var(--surface)}
+.xrow.on .xbox{color:var(--accent);border-color:var(--accent)}
+.xrow .xt{flex:1;font-size:13px;line-height:1.35}
+.xrow .xt b{display:block;font-size:13.5px}
+.xrow .xt span{color:var(--ink-3);font-size:11.5px}
+
+.dotlist{display:flex;flex-direction:column;gap:7px}
+.dotrow{display:flex;align-items:center;gap:11px;padding:9px 11px;border:1px solid var(--line-soft);
+  border-radius:var(--r);background:var(--surface-2);text-align:left;width:100%}
+.dotrow:hover{border-color:var(--line)}
+.dotrow.on{background:var(--surface-3);border-color:currentColor}
+.dotrow .dt{width:26px;height:26px;border-radius:50%;flex:none;border:2px solid currentColor;
+  background:transparent;display:grid;place-items:center;font-family:var(--mono);font-size:11px;
+  font-weight:700;color:inherit;opacity:.55}
+.dotrow.on .dt{background:currentColor;opacity:1}
+.dotrow.on .dt b{color:var(--surface);font-weight:700}
+.dotrow .dt b{color:transparent}
+.dotrow .dl{flex:1;min-width:0}
+.dotrow .dl b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink)}
+.dotrow .dl span{display:block;font-size:11.5px;color:var(--ink-3);line-height:1.35}
+.dotrow.off{opacity:.42}
+.dotrow .auto{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);flex:none}
+
+.alert{border:1px solid var(--warn);background:var(--warn-bg);color:var(--warn);border-radius:var(--r);
+  padding:11px 13px;font-size:13px;line-height:1.4;margin-top:12px}
+.alert b{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;margin-bottom:3px}
+.alert.star{border-color:var(--sand);background:var(--sand-soft);color:var(--sand)}
+
+/* legend */
+.legendbar{display:flex;flex-wrap:wrap;gap:9px}
+.lg{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);
+  letter-spacing:.06em;color:var(--ink-2);border:1px solid var(--line-soft);border-radius:999px;padding:3px 9px 3px 5px}
+.lg i{width:13px;height:13px;border-radius:50%;display:grid;place-items:center;font-size:8px;
+  font-weight:700;color:var(--surface);flex:none}
+
+/* whiteboard grid */
+.boardscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.board{border-collapse:separate;border-spacing:0;table-layout:fixed;width:756px}
+.board th.mo{text-align:left;font-family:var(--serif);font-size:13px;font-weight:600;
+  padding:0 8px;white-space:nowrap;width:116px;background:var(--surface-2);
+  border:1px solid var(--line-soft);border-right:0;overflow:hidden}
+.board th.mo em{display:block;font-style:normal;font-family:var(--mono);font-size:8.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.board td.cell{width:34px;height:40px;padding:0;border:1px solid var(--line-soft);
+  background:var(--surface);vertical-align:top;position:relative}
+.board td.cell.empty{background:transparent;border-color:transparent}
+.board td.cell button{width:100%;height:100%;background:none;border:0;padding:2px;display:block;position:relative}
+.board .dnum{position:absolute;top:1px;left:3px;font-family:var(--mono);font-size:8.5px;
+  color:var(--ink-3);line-height:1;font-variant-numeric:tabular-nums}
+.board .cell.xd .dnum{color:var(--ink-2)}
+.board .cell.xd::after{content:"";position:absolute;inset:3px;
+  background:linear-gradient(to bottom right,transparent 46%,var(--ink-3) 46%,var(--ink-3) 54%,transparent 54%);
+  opacity:.34;pointer-events:none}
+.board .cell.today{outline:2px solid var(--accent);outline-offset:-2px;z-index:2}
+.board .cell.injury{outline:2px solid var(--d-orange);outline-offset:-2px;z-index:2}
+.board .cell.star{background:var(--sand-soft)}
+.board .cell.star .dnum{color:var(--sand)}
+.board .cell.future{opacity:.42}
+.board .cell.phasestart{border-left:3px solid var(--ink-2)}
+.dotgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:11px 3px 2px;
+  justify-items:center;align-content:start}
+.dotgrid i{width:8px;height:8px;border-radius:50%;display:block;background:transparent}
+.board .cell .goalwave{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;pointer-events:none}
+
+.monthrow-stat{font-family:var(--mono);font-size:9px;color:var(--ink-3);line-height:1.35;
+  padding:4px 7px;background:var(--surface-2);border:1px solid var(--line-soft);border-left:0;
+  width:96px;vertical-align:top}
+.monthrow-stat b{color:var(--sand);font-size:11px}
+
+/* ---------- dashboard ---------- */
+.hero{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  padding:18px;box-shadow:var(--shadow)}
+.hero .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
+.hero .big{font-family:var(--mono);font-size:44px;font-weight:600;line-height:1;letter-spacing:-.02em;
+  margin:8px 0 2px;font-variant-numeric:tabular-nums}
+.hero .of{font-size:15px;color:var(--ink-3);font-weight:400}
+.meter{height:8px;background:var(--surface-3);border-radius:999px;margin:12px 0 8px;position:relative;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:999px}
+.meter .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-3);opacity:.65}
+.hero .note{font-size:12.5px;color:var(--ink-2);margin:0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:13px}
+.stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);display:block;margin-bottom:7px;line-height:1.3}
+.stat .v{font-family:var(--mono);font-size:25px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:13px;color:var(--ink-3);font-weight:400}
+.stat .d{font-size:11.5px;color:var(--ink-3);margin-top:6px;line-height:1.35}
+figure{margin:0}
+figcaption{margin-bottom:10px}
+figcaption .t{font-family:var(--serif);font-size:16px;font-weight:600}
+figcaption .s{font-size:12px;color:var(--ink-3);margin-top:1px}
+.chartbox{overflow-x:auto}
+svg.chart{display:block;width:100%;height:auto;min-width:300px;overflow:visible}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:11px;font-size:11.5px;color:var(--ink-2)}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.legend .ln{width:14px;height:0;border-top:2px dashed var(--ink-3);border-radius:0;margin-right:5px}
+.tip{position:fixed;z-index:70;pointer-events:none;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:8px 10px;box-shadow:var(--shadow);font-size:12px;display:none;max-width:220px}
+.tip.on{display:block}
+.tip b{font-family:var(--mono);display:block;font-size:11px;color:var(--ink-3);text-transform:uppercase;margin-bottom:3px}
+.tip .tv{font-family:var(--mono);font-size:16px;font-weight:600}
+
+/* ---------- ledger ---------- */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.toolbar .btn{width:auto;padding:9px 14px;font-size:13px}
+.day{margin-bottom:20px}
+.dayhd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:9px 12px;background:var(--surface-2);
+  border:1px solid var(--line-soft);border-radius:var(--r) var(--r) 0 0;border-bottom:0;position:sticky;top:56px;z-index:10}
+.dayhd h3{margin:0;font-family:var(--serif);font-size:16.5px;font-weight:600}
+.dayhd .dow{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase}
+.dayhd .sp{flex:1}
+.dayhd .dots{display:flex;gap:3px}
+.dayhd .dots i{width:9px;height:9px;border-radius:50%}
+.tblbox{overflow-x:auto;border:1px solid var(--line-soft);border-radius:0 0 var(--r) var(--r);background:var(--surface)}
+table.log{border-collapse:collapse;width:100%;min-width:660px;font-size:13px}
+table.log thead th{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);text-align:left;font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line);
+  white-space:nowrap;background:var(--surface)}
+table.log tbody td{padding:8px 10px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+table.log tbody tr:last-child td{border-bottom:0}
+table.log tbody tr:hover{background:var(--surface-2)}
+td.t{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink-2);width:64px}
+td.q{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;width:74px}
+td.n{font-weight:550;min-width:170px}
+td.n em{display:block;font-style:normal;font-weight:400;font-size:11px;color:var(--ink-3)}
+td.e{width:150px}
+td.no{color:var(--ink-2);font-size:12.5px;min-width:150px}
+td.x{width:34px;text-align:right}
+.del{background:none;border:0;color:var(--ink-3);font-size:15px;padding:0 3px;line-height:1;opacity:.5}
+.del:hover{color:var(--crit);opacity:1}
+.tod{font-family:var(--mono);font-size:9px;color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase;display:block}
+
+/* ---------- plan ---------- */
+.phase{border-left:3px solid var(--line);padding:0 0 20px 18px;position:relative}
+.phase:last-child{padding-bottom:0}
+.phase::before{content:"";position:absolute;left:-7px;top:5px;width:11px;height:11px;border-radius:50%;
+  background:var(--surface);border:3px solid var(--line)}
+.phase.now{border-left-color:var(--accent)}
+.phase.now::before{background:var(--accent);border-color:var(--accent)}
+.phase.done{border-left-color:var(--good)}
+.phase.done::before{background:var(--good);border-color:var(--good)}
+.phase.goal::before{background:var(--sand);border-color:var(--sand)}
+.phase h4{margin:0;font-family:var(--serif);font-size:17px;font-weight:600;display:flex;gap:8px;
+  align-items:baseline;flex-wrap:wrap}
+.phase .when{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.06em;margin:3px 0 8px}
+.phase p{margin:0 0 9px;font-size:13.5px;color:var(--ink-2);max-width:62ch}
+.phase .job{color:var(--ink);font-weight:550}
+.livedots{display:flex;gap:5px;align-items:center;margin:0 0 10px;flex-wrap:wrap}
+.livedots i{width:11px;height:11px;border-radius:50%}
+.livedots span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.ms{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.ms li{display:flex;gap:9px;align-items:flex-start;font-size:13px;padding:4px 0}
+.ms input[type=checkbox]{width:16px;height:16px;flex:none;margin:2px 0 0;accent-color:var(--accent)}
+.ms label{cursor:pointer;color:var(--ink-2)}
+.ms li.checked label{color:var(--ink-3);text-decoration:line-through}
+.goalcard{background:linear-gradient(160deg,var(--sand-soft),var(--surface) 70%);
+  border:1px solid var(--sand);border-radius:var(--r-lg);padding:18px}
+.goalcard h3{font-family:var(--serif);font-size:22px;margin:0 0 6px;font-weight:600}
+.goalcard p{margin:0;font-size:13.5px;color:var(--ink-2);max-width:58ch}
+.rules{list-style:none;margin:0;padding:0;counter-reset:r;display:flex;flex-direction:column;gap:11px}
+.rules li{counter-increment:r;padding-left:30px;position:relative;font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.rules li::before{content:counter(r);position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;
+  background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;
+  font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:600}
+.rules b{color:var(--ink)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs button{flex:1;background:none;border:0;padding:9px 2px 10px;display:flex;flex-direction:column;
+  align-items:center;gap:3px;color:var(--ink-3);font-family:var(--mono);font-size:9px;
+  letter-spacing:.07em;text-transform:uppercase;border-top:2px solid transparent;margin-top:-1px}
+nav.tabs button span{font-size:18px;line-height:1;font-family:var(--sans)}
+nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabbar) + 16px);z-index:80;
+  background:var(--surface-3);border:1px solid var(--line);color:var(--ink);padding:10px 16px;
+  border-radius:999px;font-size:13px;box-shadow:var(--shadow);opacity:0;transition:opacity .18s;
+  pointer-events:none;max-width:88vw;text-align:center}
+.toast.on{opacity:1}
+.disclaimer{font-size:11.5px;color:var(--ink-3);border-top:1px solid var(--line-soft);
+  padding-top:12px;margin-top:22px;max-width:64ch;line-height:1.5}
+.csvout{font-family:var(--mono);font-size:11px;white-space:pre;min-height:180px}
+@media (max-width:420px){
+  .hd h1{font-size:16px}.countdown b{font-size:18px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+}
+</style>
+
+<header>
+  <div class="wrap hd">
+    <h1><small>Training, not healing</small><span id="phaseName">—</span></h1>
+    <div class="countdown"><b id="cdOut">—</b><span id="cdUnit">months out</span></div>
+    <button class="iconbtn" id="themeBtn" title="Switch theme" aria-label="Switch theme">◐</button>
+  </div>
+  <div class="rail"><i id="railFill" style="width:0%"></i></div>
+</header>
+
+<main class="wrap">
+
+  <!-- ══ 1. CAPTURE ══ -->
+  <section class="screen on" id="s-log">
+    <p class="eyebrow">Capture</p>
+    <h2 class="sec">What did you just take?</h2>
+    <p class="sub">Tap a tile to log it. Time defaults to now. Anything that earns a sticker dot is marked
+      with its dot colour in the corner — logging it lights the dot on the board automatically.</p>
+    <div class="quickrow" id="stacks"></div>
+    <div id="catalogGroups"></div>
+    <p class="disclaimer">A personal log, not medical advice. Ceilings and phase dates are defaults you can
+      edit — Dr. Laughren and your pharmacist set the real ones.</p>
+  </section>
+
+  <!-- ══ 2. BOARD ══ -->
+  <section class="screen" id="s-board">
+    <div class="stack" id="boardBody"></div>
+  </section>
+
+  <!-- ══ 3. LEDGER ══ -->
+  <section class="screen" id="s-table">
+    <p class="eyebrow">Ledger</p>
+    <h2 class="sec">Every dose, every day</h2>
+    <p class="sub">Newest day first. Each day totals its own acetaminophen, opioid load and dots earned.</p>
+    <div class="toolbar">
+      <button class="btn" id="copyCsv">Copy CSV</button>
+      <button class="btn ghost" id="dlCsv">Download .csv</button>
+      <button class="btn ghost" id="backupBtn">Backup JSON</button>
+      <button class="btn ghost" id="restoreBtn">Restore</button>
+    </div>
+    <div id="ledger"></div>
+  </section>
+
+  <!-- ══ 4. DASHBOARD ══ -->
+  <section class="screen" id="s-dash">
+    <p class="eyebrow">Dashboard</p>
+    <h2 class="sec" id="dashDate">Today</h2>
+    <p class="sub">The number that matters most sits on top: total acetaminophen from every source.</p>
+    <div class="stack" id="dashBody"></div>
+  </section>
+
+  <!-- ══ 5. PLAN ══ -->
+  <section class="screen" id="s-plan">
+    <p class="eyebrow">The road</p>
+    <h2 class="sec">Four phases to Hawaii</h2>
+    <p class="sub">Protect, Build, Load, Power. Tick milestones as you clear them.</p>
+    <div class="stack" id="planBody"></div>
+  </section>
+
+</main>
+
+<nav class="tabs">
+  <button data-tab="log" class="on"><span>➕</span>Capture</button>
+  <button data-tab="board"><span>🟢</span>Board</button>
+  <button data-tab="table"><span>📋</span>Ledger</button>
+  <button data-tab="dash"><span>📊</span>Dash</button>
+  <button data-tab="plan"><span>🏄</span>Plan</button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"></div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ════════ CONSTANTS ════════ */
+const INJURY = "2026-08-03";
+const GOAL   = "2027-03-20";          /* 🌊 HAWAII — from the whiteboard doc */
+const KEY    = "mq_recovery_v3";
+
+/* ════════ THE FIVE (SIX) DOTS ════════
+   Legend follows Part 1's sticker table. ORANGE = CARDIO is added because
+   Part 3 introduces it from Phase 2 onward. NOTE: Part 3's phase text uses a
+   different colour map (Blue = strength, Purple = sleep) than Part 1's table.
+   Part 1 wins here because that is the sheet you buy. Edit `slot` never —
+   fixed position is what makes the dots readable without relying on colour. */
+const DOTS = [
+  {id:"green", slot:0, letter:"R", name:"REHAB",     v:"--d-green",
+   earns:"Prescribed PT done completely. Abductor / glute med work once cleared.",
+   fallback:"10 ankle pumps + 1 set of quad sets, in bed"},
+  {id:"blue",  slot:1, letter:"Z", name:"RECOVER",   v:"--d-blue",
+   earns:"7+ hours of sleep, or a real mobility / soft-tissue session.",
+   fallback:"Phone out of the room, lights down 30 min early"},
+  {id:"yellow",slot:2, letter:"F", name:"FUEL",      v:"--d-yellow",
+   earns:"Protein target hit + calcium/D, and no alcohol.",
+   fallback:"One protein shake"},
+  {id:"red",   slot:3, letter:"S", name:"STRENGTH",  v:"--d-red",
+   earns:"Loaded resistance work — upper body and paddle now, full body later.",
+   fallback:"One set of band pull-aparts"},
+  {id:"purple",slot:4, letter:"P", name:"SPIRITUAL", v:"--d-purple",
+   earns:"Meditation, breathwork or journaling.",
+   fallback:"Three minutes of box breathing"},
+  {id:"orange",slot:5, letter:"C", name:"CARDIO",    v:"--d-orange",
+   earns:"Circulation first, aerobic base second. Paddling out is a cardiovascular event.",
+   fallback:"Ten easy minutes on the bike"}
+];
+const DOT_BY = Object.fromEntries(DOTS.map(d=>[d.id,d]));
+
+/* ════════ FOUR PHASES (from the whiteboard doc) ════════ */
+const PHASES = [
+  {id:"protect", em:"🛡️", name:"PROTECT", from:"2026-08-03", to:"2026-09-30",
+   live:["green","blue","yellow","purple"],
+   job:"Let the nail do the work. Protect the construct, preserve everything you are allowed to preserve, and build the ritual of visiting the board.",
+   detail:"Ankle pumps for circulation. Quad sets, glute sets, knee ROM within surgeon limits. From week six, abductor work becomes the priority. Protein around 1.6 g/kg/day, calcium and vitamin D, alcohol policy decided.",
+   why:"The antegrade nail went in through the trochanteric region, splitting the glute medius and abductor complex. Weakness there is well documented and does not reliably resolve on its own — and it is the muscle that stabilises your hips in the pop-up and holds your back foot loaded through a bottom turn. This is the make-or-break tissue.",
+   ms:["Radiographic evidence of early callus","Off feather-touch weight bearing, on surgeon clearance",
+       "Six-week gate with Dr. Laughren — Sep 15","Staples removed","Physio referral locked in before Oct 1",
+       "Alcohol policy decided","Under 3,000 mg acetaminophen for 7 straight days","Hydromorphone stopped"]},
+  {id:"build", em:"🧱", name:"BUILD", from:"2026-10-01", to:"2026-11-30",
+   live:["green","blue","yellow","red","purple","orange"],
+   job:"Rebuild the base. Progressive loading, restore normal gait, re-establish paddle fitness.",
+   detail:"Strength enters as the main event: progressive resistance, deliberate abductor strengthening, early single-leg work. Train the right leg hard too — cross-education helps preserve neural drive to the injured side. Rehab shifts from protection to correction: gait retraining, hip stability, killing any Trendelenburg lurch before it becomes permanent.",
+   why:"The plateau lives here. Somewhere in November you will be walking normally, not in pain, and improvement will slow to nearly imperceptible. That is the Plateau of Latent Potential, and it is exactly when abductor rehab gets abandoned. Five or six blank squares in a row in November is not laziness — it is the plateau, and the board is what tells you while there is still time to correct.",
+   ms:["Unassisted walking","Symmetrical gait, no Trendelenburg lurch","Bodyweight squat to parallel",
+       "Off codeine entirely","Paddle fitness re-started"]},
+  {id:"load", em:"🏋️", name:"LOAD", from:"2026-12-01", to:"2027-01-31",
+   live:["green","blue","yellow","red","purple","orange"],
+   job:"Chase symmetry. Close the gap between left and right until the difference is measurable in single digits.",
+   detail:"Heavy-ish bilateral and unilateral loading — squat, hinge, step-up, split squat. Single-leg calf raise volume, single-leg squat quality. Continued dedicated abduction strengthening; this does not graduate out. If a pool or paddle ergometer is available, this is where paddle-specific endurance gets built.",
+   ms:["Hip abduction strength within 90% of the right leg","Single-leg calf raise × 25",
+       "Single-leg squat × 10","Paddle block completed"]},
+  {id:"power", em:"⚡", name:"POWER", from:"2027-02-01", to:"2027-03-20",
+   live:["green","blue","yellow","red","purple","orange"],
+   job:"Convert strength into speed, and rehearse the actual movement.",
+   detail:"Hop testing, landing mechanics, deceleration and absorption. Pop-up drills on the floor, then on a board, then in water. Paddle volume ramp, ocean time as conditions and clearance allow. Taper the final ten days — arrive fresh, not cooked.",
+   ms:["Radiographic union confirmed","Single-leg squat × 10","Single-leg calf raise × 25",
+       "Hop testing passed","Hip abduction strength within 90% of right leg","Final ten days tapered"]},
+  {id:"hawaii", em:"🌊", name:"HAWAII", from:"2027-03-20", to:"2027-03-20", goal:true,
+   live:[], job:"Surfing with your daughter and the rest of the family.",
+   detail:"The whole family in the water. That is what all of the above is for.",
+   ms:["Paddle out together","Catch a wave with her","Stay out a full session"]}
+];
+
+/* monthly benchmark tests, from Part 4 */
+const BENCH = {
+  "2026-09":"Knee flexion degrees; pain-free standing time",
+  "2026-10":"Knee flexion degrees; pain-free standing time",
+  "2026-11":"Single-leg calf raise reps; walking distance",
+  "2026-12":"Single-leg calf raise reps; walking distance",
+  "2027-01":"Single-leg squat reps; abduction strength L vs R",
+  "2027-02":"Single-leg squat reps; abduction strength L vs R",
+  "2027-03":"Full clearance battery + paddle time trial"
+};
+
+/* ════════ CATALOG ════════ */
+const GROUPS = [
+  {id:"pain",  label:"Pain control",           color:"var(--crit)"},
+  {id:"clot",  label:"Clot & inflammation",    color:"var(--sand)"},
+  {id:"sleep", label:"Sleep",                  color:"var(--accent)"},
+  {id:"supp",  label:"Vitamins & supplements", color:"var(--good)"},
+  {id:"canna", label:"Cannabis & other",       color:"var(--warn)"},
+  {id:"rehab", label:"Rehab & training",       color:"var(--accent)"},
+  {id:"body",  label:"Body & care",            color:"var(--ink-3)"}
+];
+/* `dot` = the sticker this entry contributes to */
+const CATALOG = [
+  {id:"apap",   em:"💊",   name:"Acetaminophen",           common:"Tylenol Extra Strength", dose:"500 mg", unit:"tab", q:2, g:"pain", fx:"Pain relief", mgApap:500},
+  {id:"t3",     em:"💊✳️", name:"Acetaminophen + codeine", common:"Tylenol No. 3", dose:"300 / 30 mg", unit:"tab", q:1, g:"pain", fx:"Pain relief (opioid)", mgApap:300, mgCodeine:30, opioid:true},
+  {id:"hydro",  em:"🛑",   name:"Hydromorphone",           common:"Dilaudid", dose:"per Rx", unit:"dose", q:1, g:"pain", fx:"Severe pain (opioid)", opioid:true},
+  {id:"celeco", em:"🔥",   name:"Celecoxib",               common:"Celebrex · logged “CE”", dose:"per Rx", unit:"cap", q:1, g:"pain", fx:"Anti-inflammatory"},
+  {id:"ibu",    em:"🧯",   name:"Ibuprofen",               common:"Advil", dose:"200 mg", unit:"tab", q:2, g:"pain", fx:"Anti-inflammatory"},
+
+  {id:"asa",    em:"🩸",   name:"Acetylsalicylic acid",    common:"ASA · “blood thinner”", dose:"81–325 mg", unit:"tab", q:1, g:"clot", fx:"Blood thinner"},
+  {id:"lmwh",   em:"💉",   name:"Enoxaparin",              common:"Lovenox injection", dose:"per Rx", unit:"inj", q:1, g:"clot", fx:"Blood thinner"},
+
+  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"25 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health"},
+  {id:"gravol", em:"😵‍💫",  name:"Dimenhydrinate",          common:"Gravol", dose:"50 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep aid / nausea"},
+  {id:"sleepez",em:"💤",   name:"Dimenhydrinate gel",      common:"Sleep-EZ", dose:"25 mg", unit:"gel", q:1, g:"sleep", fx:"Sleep aid"},
+  {id:"melat",  em:"🌛",   name:"Melatonin",               common:"gummy", dose:"5 mg", unit:"gummy", q:1, g:"sleep", fx:"Sleep onset"},
+  {id:"mag",    em:"🧲",   name:"Magnesium",               common:"bisglycinate", dose:"—", unit:"cap", q:2, g:"sleep", fx:"Sleep / muscle relax"},
+  {id:"winddown",em:"🕯️", name:"Wind-down routine",       common:"phone out, lights down", dose:"—", unit:"", q:1, g:"sleep", fx:"Sleep hygiene", dot:"blue"},
+
+  {id:"vitstack",em:"🧺",  name:"Full vitamin stack",      common:"D + Ω-3 + 5-HTP + C", dose:"—", unit:"stack", q:1, g:"supp", fx:"Vitamin", dot:"yellow"},
+  {id:"vitd",   em:"☀️",   name:"Cholecalciferol",         common:"Vitamin D3", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · bone", dot:"yellow"},
+  {id:"calcium",em:"🦴",   name:"Calcium + K2",            common:"—", dose:"—", unit:"cap", q:1, g:"supp", fx:"Bone healing", dot:"yellow"},
+  {id:"omega",  em:"🐟",   name:"Omega-3",                 common:"Fish oil", dose:"—", unit:"cap", q:1, g:"supp", fx:"Anti-inflammatory"},
+  {id:"htp",    em:"🧘",   name:"5-HTP",                   common:"—", dose:"—", unit:"cap", q:1, g:"supp", fx:"Mood / sleep"},
+  {id:"vitc",   em:"🍊",   name:"Ascorbic acid",           common:"Vitamin C", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · collagen"},
+  {id:"creat",  em:"💪",   name:"Creatine monohydrate",    common:"—", dose:"10 g", unit:"scoop", q:1, g:"supp", fx:"Muscle retention"},
+  {id:"protein",em:"🥤",   name:"Protein + collagen",      common:"shake", dose:"—", unit:"shake", q:1, g:"supp", fx:"Bone & tissue repair", dot:"yellow"},
+  {id:"protgoal",em:"🍗",  name:"Protein target hit",      common:"~1.6 g/kg for the day", dose:"—", unit:"", q:1, g:"supp", fx:"Fuel", dot:"yellow"},
+
+  {id:"thc",    em:"🍬",   name:"THC edible",              common:"gummy", dose:"5 mg", unit:"piece", q:1, g:"canna", fx:"Pain / sleep"},
+  {id:"cbn",    em:"🫐",   name:"CBN gummy",               common:"—", dose:"10 mg", unit:"piece", q:1, g:"canna", fx:"Sleep"},
+  {id:"flower", em:"🌿",   name:"Cannabis flower",         common:"indica", dose:"0.35 g", unit:"g", q:0.35, g:"canna", fx:"Pain / relaxation"},
+  {id:"preroll",em:"🚬",   name:"Pre-roll",                common:"sativa", dose:"—", unit:"roll", q:1, g:"canna", fx:"Pain / mood"},
+  {id:"caff",   em:"⚡",   name:"Caffeine",                common:"coffee / energy drink", dose:"—", unit:"serving", q:1, g:"canna", fx:"Stimulant"},
+  {id:"alcohol",em:"🍺",   name:"Alcohol",                 common:"breaks the FUEL dot", dose:"—", unit:"drink", q:1, g:"canna", fx:"Depressant", blocks:"yellow"},
+
+  {id:"ankle",  em:"🦶",   name:"Ankle pumps / quad sets", common:"the two-minute fallback", dose:"—", unit:"set", q:3, g:"rehab", fx:"Circulation & activation", dot:"green"},
+  {id:"abduct", em:"🦿",   name:"Hip abduction / glute med",common:"the make-or-break tissue", dose:"—", unit:"set", q:3, g:"rehab", fx:"Abductor rehab", dot:"green"},
+  {id:"physio", em:"🧑‍⚕️", name:"Physiotherapy",           common:"session", dose:"—", unit:"session", q:1, g:"rehab", fx:"Rehab", dot:"green"},
+  {id:"mobil",  em:"🤸",   name:"Mobility & soft tissue",  common:"hip / knee ROM", dose:"—", unit:"min", q:15, g:"rehab", fx:"Range of motion", dot:"green", also:"blue"},
+  {id:"gait",   em:"👣",   name:"Gait retraining",         common:"—", dose:"—", unit:"min", q:10, g:"rehab", fx:"Gait & hip stability", dot:"green"},
+  {id:"resist", em:"🏋️",  name:"Resistance training",     common:"loaded work", dose:"—", unit:"min", q:30, g:"rehab", fx:"Strength", dot:"red"},
+  {id:"upper",  em:"💪",   name:"Upper-body calisthenics", common:"—", dose:"—", unit:"min", q:30, g:"rehab", fx:"Strength", dot:"red"},
+  {id:"bands",  em:"🎗️",  name:"Band pull-aparts",        common:"the two-minute fallback", dose:"—", unit:"set", q:1, g:"rehab", fx:"Strength", dot:"red"},
+  {id:"singleleg",em:"🦵", name:"Single-leg work",         common:"squat · calf raise · step-up", dose:"—", unit:"set", q:3, g:"rehab", fx:"Symmetry", dot:"red"},
+  {id:"bike",   em:"🚴",   name:"Stationary bike",         common:"—", dose:"—", unit:"min", q:20, g:"rehab", fx:"Cardio & ROM", dot:"orange"},
+  {id:"pool",   em:"🏊",   name:"Pool / swim",             common:"—", dose:"—", unit:"min", q:30, g:"rehab", fx:"Cardio · unloaded", dot:"orange"},
+  {id:"paddle", em:"🛶",   name:"Paddle conditioning",     common:"—", dose:"—", unit:"min", q:20, g:"rehab", fx:"Surf-specific cardio", dot:"orange"},
+  {id:"crutch", em:"🩼",   name:"Crutch walk",             common:"non-weight-bearing", dose:"—", unit:"min", q:10, g:"rehab", fx:"Mobility", dot:"green"},
+  {id:"wbwalk", em:"🚶",   name:"Weight-bearing walk",     common:"as cleared", dose:"—", unit:"min", q:15, g:"rehab", fx:"Gait & loading", dot:"green", also:"orange"},
+  {id:"hop",    em:"🦘",   name:"Hop & landing drills",    common:"—", dose:"—", unit:"set", q:3, g:"rehab", fx:"Power", dot:"red"},
+  {id:"popup",  em:"🏄",   name:"Surf pop-up drill",       common:"floor → board → water", dose:"—", unit:"reps", q:10, g:"rehab", fx:"Surf-specific", dot:"red"},
+  {id:"balance",em:"🛹",   name:"Balance / board work",    common:"—", dose:"—", unit:"min", q:10, g:"rehab", fx:"Proprioception", dot:"green"},
+
+  {id:"checkin",em:"📈",   name:"Daily check-in",          common:"sleep · pain · mood", dose:"—", unit:"", q:1, g:"body", fx:"Metrics", checkin:true},
+  {id:"breath", em:"🧘‍♂️", name:"Breathwork / meditation", common:"—", dose:"—", unit:"min", q:10, g:"body", fx:"Nervous system", dot:"purple"},
+  {id:"journal",em:"📓",   name:"Journaling",              common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Spiritual", dot:"purple"},
+  {id:"wound",  em:"🩹",   name:"Wound & staple care",     common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Wound care"},
+  {id:"appt",   em:"🏥",   name:"Medical appointment",     common:"PT · Dr. Laughren · x-ray", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
+  {id:"xray",   em:"🩻",   name:"X-ray / imaging",         common:"union check", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
+  {id:"equip",  em:"🎓",   name:"Equipment graduation",    common:"walker → crutches → cane → none", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
+  {id:"shower", em:"🚿",   name:"Shower / self-care",      common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Independence"},
+  {id:"nap",    em:"🛌",   name:"Nap",                     common:"—", dose:"—", unit:"min", q:45, g:"body", fx:"Sleep debt"},
+  {id:"note",   em:"📝",   name:"Journal note",            common:"free text", dose:"—", unit:"", q:1, g:"body", fx:"Note"}
+];
+const BY_ID = Object.fromEntries(CATALOG.map(c=>[c.id,c]));
+
+const STACKS = [
+  {id:"morn", em:"🌅", label:"Morning stack", items:[["apap",2],["asa",1],["celeco",1],["vitstack",1]]},
+  {id:"aft",  em:"🌤", label:"Afternoon",     items:[["apap",2],["asa",1],["vitstack",1]]},
+  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet",1],["mag",2],["melat",1]]},
+  {id:"fall", em:"⏱️", label:"Two-minute fallback", items:[["ankle",1],["bands",1],["breath",3]]},
+  {id:"brk",  em:"⚡", label:"Breakthrough",  items:[["apap",2]]}
+];
+
+/* ════════ SEED — transcribed from the Daily Drugs Notion page, Aug 7–16 ════════ */
+const SEED_ENTRIES = [];
+function s(date,time,id,q,note){ SEED_ENTRIES.push({date,time,id,q,note:note||""}); }
+s("2026-08-07","12:00","apap",2); s("2026-08-07","12:00","creat",1);
+s("2026-08-07","16:00","vitstack",1,"Afternoon pills");
+s("2026-08-07","20:00","vitstack",1,"Dinner after walk"); s("2026-08-07","20:00","hydro",1);
+s("2026-08-07","23:15","apap",2,"Kate going to bed");
+s("2026-08-08","00:15","sleepez",1,"Logged under Aug 7 in Notion");
+s("2026-08-08","04:00","apap",2,"Woke with pain"); s("2026-08-08","04:00","sleepez",1);
+s("2026-08-08","05:30","gravol",0.5);
+s("2026-08-08","10:30","apap",2); s("2026-08-08","10:30","asa",1); s("2026-08-08","10:30","celeco",1,"“CE” blue/white"); s("2026-08-08","10:30","creat",1);
+s("2026-08-08","16:00","vitstack",1); s("2026-08-08","16:00","apap",2); s("2026-08-08","16:00","asa",1);
+s("2026-08-08","20:30","apap",2); s("2026-08-08","20:30","mag",1);
+s("2026-08-08","23:30","hydro",1); s("2026-08-08","23:30","apap",2); s("2026-08-08","23:30","gravol",0.5); s("2026-08-08","23:30","sleepez",2); s("2026-08-08","23:30","melat",2);
+s("2026-08-09","06:30","apap",2);
+s("2026-08-09","08:00","shower",1,"Out of bed + shower");
+s("2026-08-09","09:00","asa",1); s("2026-08-09","09:00","celeco",1); s("2026-08-09","09:00","apap",2);
+s("2026-08-09","17:00","apap",2); s("2026-08-09","17:00","asa",1); s("2026-08-09","17:00","vitstack",1);
+s("2026-08-09","21:30","hydro",1); s("2026-08-09","21:30","apap",2);
+s("2026-08-10","00:30","apap",2,"Written under Aug 9"); s("2026-08-10","00:30","sleepez",1); s("2026-08-10","00:30","asa",1); s("2026-08-10","00:30","mag",2);
+s("2026-08-10","06:20","apap",2); s("2026-08-10","06:20","hydro",1); s("2026-08-10","06:20","sleepez",1);
+s("2026-08-10","10:30","apap",2); s("2026-08-10","10:30","celeco",1); s("2026-08-10","10:30","asa",1); s("2026-08-10","10:30","vitstack",1); s("2026-08-10","10:30","creat",1);
+s("2026-08-10","14:00","apap",2);
+s("2026-08-10","17:00","apap",2); s("2026-08-10","17:00","asa",1); s("2026-08-10","17:00","vitstack",1);
+s("2026-08-10","21:30","apap",2);
+s("2026-08-10","22:25","mag",2); s("2026-08-10","22:25","sleepez",1);
+s("2026-08-11","06:30","apap",2);
+s("2026-08-11","08:00","shower",1,"Out of bed + shower");
+s("2026-08-11","09:00","asa",1); s("2026-08-11","09:00","celeco",1); s("2026-08-11","09:00","apap",2); s("2026-08-11","09:00","creat",1);
+s("2026-08-11","17:00","apap",2); s("2026-08-11","17:00","asa",1); s("2026-08-11","17:00","vitstack",1); s("2026-08-11","17:00","thc",1);
+s("2026-08-11","21:30","hydro",1); s("2026-08-11","21:30","apap",2);
+s("2026-08-12","00:30","apap",2,"Written under Aug 11"); s("2026-08-12","00:30","sleepez",1); s("2026-08-12","00:30","asa",1); s("2026-08-12","00:30","mag",2);
+s("2026-08-12","03:00","apap",2,"Couldn’t sleep — up half an hour, stayed in bed to 6:30"); s("2026-08-12","03:00","hydro",1);
+s("2026-08-12","06:30","apap",2); s("2026-08-12","06:30","asa",1); s("2026-08-12","06:30","vitstack",1); s("2026-08-12","06:30","celeco",1);
+s("2026-08-12","11:00","apap",2); s("2026-08-12","11:00","creat",1);
+s("2026-08-12","15:30","apap",2); s("2026-08-12","15:30","creat",1); s("2026-08-12","15:30","thc",1);
+s("2026-08-12","15:30","crutch",25,"Crutched across to McGill Park — way harder than expected. Home sweaty and tired.");
+s("2026-08-12","20:30","t3",1); s("2026-08-12","20:30","apap",2);
+s("2026-08-12","22:00","hydro",1); s("2026-08-12","22:00","sleepez",1,"Adrenalin from the park trip. Need a stronger sleep aid.");
+s("2026-08-13","02:00","hydro",1); s("2026-08-13","02:00","apap",1);
+s("2026-08-13","05:00","apap",1); s("2026-08-13","05:00","gravol",1);
+s("2026-08-13","06:00","apap",1); s("2026-08-13","06:00","asa",1); s("2026-08-13","06:00","celeco",1); s("2026-08-13","06:00","vitstack",1);
+s("2026-08-13","11:00","t3",1);
+s("2026-08-13","14:00","flower",0.35); s("2026-08-13","14:00","upper",45,"Full upper-body workout — calisthenics"); s("2026-08-13","14:00","protein",1);
+s("2026-08-13","15:30","gravol",1); s("2026-08-13","15:30","mag",2); s("2026-08-13","15:30","melat",1);
+s("2026-08-13","15:30","wound",1,"Bandage inspection with Dad — taped a couple of areas starting to peel");
+s("2026-08-13","16:00","nap",60,"Nap time");
+s("2026-08-13","18:00","t3",1);
+s("2026-08-13","21:30","quet",1); s("2026-08-13","21:30","hydro",1); s("2026-08-13","21:30","mag",2); s("2026-08-13","21:30","melat",1);
+s("2026-08-14","00:00","apap",2,"Continues the Aug 13 block — no heading in Notion"); s("2026-08-14","00:00","mag",2);
+s("2026-08-14","01:00","quet",1); s("2026-08-14","01:00","mag",2);
+s("2026-08-14","06:00","apap",2);
+s("2026-08-14","09:00","asa",1); s("2026-08-14","09:00","celeco",1); s("2026-08-14","09:00","t3",1);
+s("2026-08-14","14:00","apap",2); s("2026-08-14","14:00","vitstack",1); s("2026-08-14","14:00","asa",1);
+s("2026-08-14","16:00","cbn",1); s("2026-08-14","16:00","upper",45,"Upper-body workout");
+s("2026-08-14","17:15","apap",2); s("2026-08-14","17:15","melat",1); s("2026-08-14","17:15","mag",1);
+s("2026-08-14","20:00","caff",0.5,"Picked up by Kyle — half a tropical Monster"); s("2026-08-14","20:00","flower",0.35,"Pink kush indica"); s("2026-08-14","20:00","preroll",1,"Sativa, from Kyle");
+s("2026-08-15","02:00","quet",2,"2 × 25 mg — slept 2:40–7:30");
+s("2026-08-15","08:30","shower",1,"Out with Rob for a smoothie");
+s("2026-08-15","09:15","appt",1,"Mental health assessment, AAC");
+s("2026-08-15","13:30","hydro",1,"Rob drove me from AAC to urgent care on Hastings");
+s("2026-08-15","14:30","asa",1);
+s("2026-08-15","15:30","wound",1,"Bandages off — saw the 45 staples for the first time");
+s("2026-08-15","15:30","appt",1,"Dr Cameron listened to everything, mental and physical. New Rx: quetiapine 1–2 at bedtime.");
+s("2026-08-15","17:30","t3",1,"Tacofino with Mom and Dad"); s("2026-08-15","17:30","asa",1); s("2026-08-15","17:30","celeco",1); s("2026-08-15","17:30","vitstack",1);
+s("2026-08-15","20:00","journal",1,"Intensely open conversation with my parents — spoke clearly, sounded better. Called Cassidy. Long talk with Andy.");
+s("2026-08-15","21:00","quet",1); s("2026-08-15","21:00","t3",1);
+s("2026-08-16","15:35","note",1,"Getting here was a lot of work.");
+
+/* Oura nights, read off the ring reports */
+const SEED_DAILY = {
+  "2026-08-08":{sleepH:2.63, note:"Oura: 2 h 38 m"},
+  "2026-08-11":{sleepH:0.4,  note:"Oura registered under 25 min in any session — probably moving too much"},
+  "2026-08-12":{sleepH:3.5,  note:"Oura: 3.5 h"},
+  "2026-08-14":{sleepH:4.3, eff:53, rhr:64, deepMin:36, latency:45, debt:10.5, note:"TIB 8 h 05 m — 53% efficiency"},
+  "2026-08-15":{sleepH:4.7, eff:88, rhr:60, deepMin:40, latency:12, debt:10.17, score:57, note:"Short but efficient — TIB 5 h 22 m"}
+};
+
+/* ════════ STATE ════════ */
+let state = load();
+function load(){
+  try{ const raw = localStorage.getItem(KEY); if(raw) return migrate(JSON.parse(raw)); }catch(e){}
+  return seedState();
+}
+function migrate(o){
+  o.entries ||= []; o.daily ||= {}; o.done ||= {}; o.board ||= {}; o.bench ||= {};
+  o.settings ||= {apapTab:500, apapLimit:4000, theme:null};
+  return o;
+}
+function seedState(){
+  return {
+    entries: SEED_ENTRIES.map((e,i)=>({uid:"s"+i, ...e})),
+    daily: JSON.parse(JSON.stringify(SEED_DAILY)),
+    done:{}, board:{}, bench:{},
+    settings:{apapTab:500, apapLimit:4000, theme:null}
+  };
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ════════ HELPERS ════════ */
+const pad2 = n => String(n).padStart(2,"0");
+function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+function nowHM(){ const d=new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); }
+function parseISO(x){ const [y,m,d]=x.split("-").map(Number); return new Date(y,m-1,d); }
+function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/864e5); }
+function addDays(iso,n){ const d=parseISO(iso); d.setDate(d.getDate()+n);
+  return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+const DOW=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function longDate(iso){ const d=parseISO(iso); return MON[d.getMonth()]+" "+d.getDate(); }
+function shortDate(iso){ const d=parseISO(iso); return MON[d.getMonth()].slice(0,3)+" "+d.getDate(); }
+function dow(iso){ return DOW[parseISO(iso).getDay()]; }
+function h12(hm){ const [H,M]=hm.split(":").map(Number); const ap=H<12?"am":"pm"; let h=H%12; if(!h) h=12;
+  return h+":"+pad2(M)+" "+ap; }
+function timeOfDay(hm){ const H=Number(hm.split(":")[0]);
+  return H<5?"Overnight":H<8?"Early morning":H<12?"Morning":H<17?"Afternoon":H<21?"Evening":"Night"; }
+function fmtQty(q,unit){ const n=(Math.round(q*100)/100).toString();
+  return unit ? n+" "+unit+(q!==1 && unit.length<7 && !unit.endsWith("s")?"s":"") : n; }
+function esc(x){ return String(x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("on");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2200); }
+
+function phaseOn(iso){
+  for(const p of PHASES) if(iso>=p.from && iso<=p.to) return p;
+  return iso<PHASES[0].from ? PHASES[0] : PHASES[PHASES.length-1];
+}
+function liveDots(iso){
+  const p = phaseOn(iso);
+  return p.goal ? PHASES[PHASES.length-2].live : p.live;
+}
+/* first phase in which a dot counts toward a full day */
+function phaseFirstLive(id){
+  const p = PHASES.find(x=>x.live.includes(id));
+  return p ? p.name+", "+shortDate(p.from) : "a later phase";
+}
+
+/* ── dose maths ── */
+function apapMg(e){ const c=BY_ID[e.id]; if(!c||!c.mgApap) return 0;
+  return (c.id==="apap" ? state.settings.apapTab : c.mgApap) * e.q; }
+function dayStats(iso){
+  const rows = state.entries.filter(e=>e.date===iso);
+  let apap=0,opioid=0,codeine=0,rehabN=0;
+  rows.forEach(e=>{ const c=BY_ID[e.id]; if(!c) return;
+    apap+=apapMg(e);
+    if(c.opioid){ opioid+=e.q; if(c.mgCodeine) codeine+=c.mgCodeine*e.q; }
+    if(c.g==="rehab") rehabN++;
+  });
+  const d = state.daily[iso]||{};
+  return {iso, rows, apap, opioid, codeine, rehabN, sleepH:d.sleepH, daily:d};
+}
+function apapLevel(mg){ const l=state.settings.apapLimit;
+  return mg>l ? "crit" : mg>=l*0.75 ? "warn" : "good"; }
+
+/* ── DOT DERIVATION ──
+   auto  = earned by what you logged
+   man   = manually forced on/off (overrides auto) */
+function autoDots(iso){
+  const st = dayStats(iso);
+  const ids = new Set(st.rows.map(e=>e.id));
+  const out = {};
+  st.rows.forEach(e=>{
+    const c = BY_ID[e.id]; if(!c) return;
+    if(c.dot) out[c.dot]=true;
+    if(c.also) out[c.also]=true;
+  });
+  /* RECOVER also earned by 7+ hours of sleep */
+  if(st.sleepH != null && st.sleepH >= 7) out.blue = true;
+  /* FUEL needs protein AND calcium/D AND no alcohol */
+  const protein = ids.has("protein")||ids.has("protgoal");
+  const mineral = ids.has("calcium")||ids.has("vitd")||ids.has("vitstack");
+  out.yellow = protein && mineral;
+  /* anything flagged `blocks` kills its dot for the day */
+  st.rows.forEach(e=>{ const c=BY_ID[e.id]; if(c && c.blocks) out[c.blocks]=false; });
+  return out;
+}
+function dayDots(iso){
+  const auto = autoDots(iso);
+  const man  = (state.board[iso]&&state.board[iso].dots) || {};
+  const live = liveDots(iso);
+  const out = {};
+  /* every dot can be earned — work you actually did is never discarded.
+     `live` only decides what counts toward a full day. */
+  DOTS.forEach(d=>{ out[d.id] = (d.id in man) ? man[d.id] : !!auto[d.id]; });
+  return {dots:out, auto, man, live};
+}
+function dayMeta(iso){
+  const b = state.board[iso]||{};
+  const {dots,auto,man,live} = dayDots(iso);
+  const earned     = DOTS.filter(d=>dots[d.id]).map(d=>d.id);
+  const earnedLive = live.filter(id=>dots[id]);
+  const bonus      = earned.filter(id=>!live.includes(id));
+  return {x: !!b.x, dots, auto, man, live, earned, earnedLive, bonus,
+          star: live.length>0 && earnedLive.length===live.length,
+          milestone: state.entries.some(e=>e.date===iso && BY_ID[e.id] && BY_ID[e.id].milestone)};
+}
+/* "Never miss twice" — a blank day makes the next day mandatory */
+function mandatoryToday(){
+  const y = addDays(todayISO(),-1);
+  if(y < INJURY) return false;
+  const ym = dayMeta(y);
+  const tm = dayMeta(todayISO());
+  return ym.earned.length===0 && tm.earned.length===0;
+}
+function dotStreak(){
+  let n=0, iso=todayISO();
+  if(dayMeta(iso).earned.length===0) iso = addDays(iso,-1);
+  while(iso>=INJURY && dayMeta(iso).earned.length>0){ n++; iso=addDays(iso,-1); }
+  return n;
+}
+function monthStats(y,m){
+  const first = y+"-"+pad2(m)+"-01";
+  const days = new Date(y,m,0).getDate();
+  let perfect=0, marked=0, dots=0;
+  for(let d=1; d<=days; d++){
+    const iso = y+"-"+pad2(m)+"-"+pad2(d);
+    if(iso < INJURY || iso > todayISO()) continue;
+    const meta = dayMeta(iso);
+    if(meta.earned.length){ marked++; dots+=meta.earned.length; }
+    if(meta.star) perfect++;
+  }
+  return {perfect, marked, dots, first};
+}
+function allDates(){
+  const s2 = new Set(state.entries.map(e=>e.date));
+  Object.keys(state.daily).forEach(d=>s2.add(d));
+  Object.keys(state.board).forEach(d=>s2.add(d));
+  return [...s2].sort().reverse();
+}
+const dotVar = id => "var("+DOT_BY[id].v+")";
+
+/* ════════ SHEET ════════ */
+const scrim=document.getElementById("scrim"), sheet=document.getElementById("sheet");
+function closeSheet(){ scrim.classList.remove("on"); sheet.classList.remove("on"); sheet.innerHTML=""; }
+scrim.onclick=closeSheet;
+function showSheet(h){ sheet.innerHTML=h; scrim.classList.add("on"); sheet.classList.add("on"); }
+
+/* ════════ 1 · CAPTURE ════════ */
+function renderCatalog(){
+  const sw=document.getElementById("stacks");
+  sw.innerHTML = STACKS.map(st=>'<button class="quick" data-stack="'+st.id+'"><span>'+st.em+'</span><b>'+esc(st.label)+'</b></button>').join("");
+  sw.querySelectorAll("[data-stack]").forEach(b=> b.onclick=()=>openStack(STACKS.find(x=>x.id===b.dataset.stack)));
+
+  const host=document.getElementById("catalogGroups");
+  host.innerHTML = GROUPS.map(g=>{
+    const items = CATALOG.filter(c=>c.g===g.id); if(!items.length) return "";
+    return '<p class="eyebrow">'+esc(g.label)+'</p><div class="grid">'+items.map(c=>
+      '<button class="tile" data-id="'+c.id+'">'+
+        '<i class="strip" style="background:'+g.color+'"></i>'+
+        (c.dot?'<i class="earns" style="background:'+dotVar(c.dot)+'" title="Earns the '+DOT_BY[c.dot].name+' dot"></i>':'')+
+        (c.blocks?'<i class="earns" style="background:transparent;border:1.5px solid '+dotVar(c.blocks)+'" title="Breaks the '+DOT_BY[c.blocks].name+' dot"></i>':'')+
+        '<span class="em">'+c.em+'</span><span class="nm">'+esc(c.name)+'</span>'+
+        (c.common&&c.common!=="—"?'<span class="cm">'+esc(c.common)+'</span>':'')+
+        '<span class="ds">'+esc(c.fx)+'</span></button>').join("")+'</div>';
+  }).join("");
+  host.querySelectorAll("[data-id]").forEach(b=> b.onclick=()=>openEntry(BY_ID[b.dataset.id]));
+}
+function openEntry(c){
+  if(c.checkin) return openCheckin();
+  const isAct = ["rehab","body"].includes(c.g);
+  showSheet(
+    '<h3>'+c.em+' '+esc(c.name)+'</h3>'+
+    '<p class="sh-sub">'+esc(c.common!=="—"?c.common:c.fx)+(c.dose&&c.dose!=="—"?' · '+esc(c.dose):'')+'</p>'+
+    (c.dot?'<div class="alert" style="border-color:'+dotVar(c.dot)+';background:transparent;color:'+dotVar(c.dot)+';margin:0 0 14px"><b>Earns a dot</b>'+esc(DOT_BY[c.dot].name)+(c.also?' + '+esc(DOT_BY[c.also].name):'')+' — this will light up on the board.</div>':'')+
+    (c.blocks?'<div class="alert" style="margin:0 0 14px"><b>Breaks a dot</b>Logging this removes today’s '+esc(DOT_BY[c.blocks].name)+' dot.</div>':'')+
+    (c.unit?'<div class="field"><label>Quantity ('+esc(c.unit)+')</label><div class="stepper">'+
+      '<button type="button" id="minus">−</button><input type="number" id="q" value="'+c.q+'" min="0">'+
+      '<button type="button" id="plus">+</button></div></div>':'')+
+    '<div class="row2"><div class="field"><label>Date</label><input type="date" id="d" value="'+todayISO()+'"></div>'+
+    '<div class="field"><label>Time</label><input type="time" id="t" value="'+nowHM()+'"></div></div>'+
+    '<div class="field"><label>Notes</label><textarea id="n" placeholder="'+
+      (isAct?'How did it feel? Pain during or after?':'Why this dose — breakthrough pain, routine, couldn’t sleep?')+'"></textarea></div>'+
+    '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="ok">Log it</button></div>');
+  const q=document.getElementById("q"), step = c.q<1?0.05:(c.unit==="min"?5:1);
+  const mn=document.getElementById("minus"), pl=document.getElementById("plus");
+  if(mn) mn.onclick=()=>q.value=Math.max(0,Math.round((Number(q.value)-step)*100)/100);
+  if(pl) pl.onclick=()=>q.value=Math.round((Number(q.value)+step)*100)/100;
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=()=>{
+    const e={uid:"u"+Date.now()+Math.random().toString(36).slice(2,6),
+      date:document.getElementById("d").value, time:document.getElementById("t").value,
+      id:c.id, q:q?Number(q.value):1, note:document.getElementById("n").value.trim()};
+    if(!e.date||!e.time) return;
+    state.entries.push(e); save(); closeSheet(); renderAll();
+    let m = c.name+" logged";
+    if(c.mgApap) m += " · "+dayStats(e.date).apap.toLocaleString()+" mg acetaminophen today";
+    else if(c.dot) m += " · "+DOT_BY[c.dot].name+" dot earned";
+    toast(m);
+  };
+}
+function openStack(st){
+  showSheet('<h3>'+st.em+' '+esc(st.label)+'</h3><p class="sh-sub">Logs all of these at one time</p>'+
+    '<div class="card" style="margin-bottom:13px;font-size:13.5px;line-height:1.8">'+
+      st.items.map(([id,q])=>BY_ID[id].em+" "+esc(BY_ID[id].name)+" × "+q).join("<br>")+'</div>'+
+    '<div class="row2"><div class="field"><label>Date</label><input type="date" id="d" value="'+todayISO()+'"></div>'+
+    '<div class="field"><label>Time</label><input type="time" id="t" value="'+nowHM()+'"></div></div>'+
+    '<div class="field"><label>Notes</label><textarea id="n"></textarea></div>'+
+    '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button>'+
+    '<button class="btn" id="ok">Log '+st.items.length+' items</button></div>');
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=()=>{
+    const date=document.getElementById("d").value, time=document.getElementById("t").value;
+    const note=document.getElementById("n").value.trim();
+    if(!date||!time) return;
+    st.items.forEach(([id,q],i)=> state.entries.push({
+      uid:"u"+Date.now()+i+Math.random().toString(36).slice(2,5), date, time, id, q, note:i===0?note:""}));
+    save(); closeSheet(); renderAll(); toast(st.label+" logged");
+  };
+}
+function openCheckin(){
+  const iso=todayISO(), d=state.daily[iso]||{};
+  showSheet('<h3>📈 Daily check-in</h3><p class="sh-sub">'+esc(dow(iso)+", "+longDate(iso))+'</p>'+
+    '<div class="field"><label>Date</label><input type="date" id="d" value="'+iso+'"></div>'+
+    '<div class="row2"><div class="field"><label>Sleep (hours)</label><input type="number" id="sh" step="0.1" min="0" max="16" value="'+(d.sleepH??"")+'" placeholder="7.2"></div>'+
+    '<div class="field"><label>Efficiency %</label><input type="number" id="ef" step="1" min="0" max="100" value="'+(d.eff??"")+'" placeholder="88"></div></div>'+
+    '<div class="row2"><div class="field"><label>Resting HR</label><input type="number" id="hr" value="'+(d.rhr??"")+'" placeholder="60"></div>'+
+    '<div class="field"><label>Pain 0–10</label><input type="number" id="pn" min="0" max="10" value="'+(d.pain??"")+'" placeholder="4"></div></div>'+
+    '<div class="field"><label>Mood 1–5</label><input type="number" id="md" min="1" max="5" value="'+(d.mood??"")+'" placeholder="3"></div>'+
+    '<div class="field"><label>Note</label><textarea id="nt">'+esc(d.note||"")+'</textarea></div>'+
+    '<p style="font-size:12px;color:var(--ink-3);margin:0 0 12px">7 hours or more lights the RECOVER dot automatically.</p>'+
+    '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="ok">Save check-in</button></div>');
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=()=>{
+    const k=document.getElementById("d").value; if(!k) return;
+    const num=id=>{const v=document.getElementById(id).value; return v===""?undefined:Number(v);};
+    const rec=Object.assign({},state.daily[k]||{},{sleepH:num("sh"),eff:num("ef"),rhr:num("hr"),
+      pain:num("pn"),mood:num("md"),note:document.getElementById("nt").value.trim()});
+    Object.keys(rec).forEach(x=>rec[x]===undefined&&delete rec[x]);
+    state.daily[k]=rec; save(); closeSheet(); renderAll(); toast("Check-in saved");
+  };
+}
+
+/* ════════ 2 · BOARD ════════ */
+function renderBoard(){
+  const iso=todayISO(), meta=dayMeta(iso), ph=phaseOn(iso);
+  const toGoal=daysBetween(iso,GOAL), monthsOut=Math.round(toGoal/30.44*10)/10;
+  const streak=dotStreak(), mand=mandatoryToday();
+
+  const legend='<div class="legendbar">'+DOTS.map(d=>
+    '<span class="lg"><i style="background:'+dotVar(d.id)+'"><b>'+d.letter+'</b></i>'+d.name+'</span>').join("")+
+    '<span class="lg"><i style="background:var(--sand);color:var(--surface)">★</i>PERFECT DAY</span></div>';
+
+  const today =
+    '<div class="todaycard">'+
+      '<div class="todayhd"><h3>'+esc(dow(iso)+", "+longDate(iso))+'</h3>'+
+        '<span class="sp"></span>'+
+        '<span class="pill '+(meta.star?"accent":"neutral")+'">'+meta.earnedLive.length+' / '+meta.live.length+' dots</span>'+
+        (meta.bonus.length?'<span class="pill neutral">+'+meta.bonus.length+' bonus</span>':'')+
+        (streak?'<span class="pill good">'+streak+'-day streak</span>':'')+'</div>'+
+      '<button class="xrow'+(meta.x?" on":"")+'" id="xtoggle">'+
+        '<span class="xbox">✕</span>'+
+        '<span class="xt"><b>'+(meta.x?"Day crossed off":"Cross off the day first")+'</b>'+
+        '<span>The X is free — you get it just for existing. Attendance precedes performance.</span></span></button>'+
+      '<div class="dotlist">'+DOTS.map(d=>{
+        const live = meta.live.includes(d.id);
+        const on = meta.dots[d.id];
+        const isAuto = on && meta.auto[d.id] && !(d.id in meta.man);
+        const why = live ? (on ? d.earns : d.fallback+" — the two-minute version")
+                         : (on ? "Bonus — earned, but not part of a full day this phase"
+                               : "Not counted until "+phaseFirstLive(d.id));
+        return '<button class="dotrow'+(on?" on":"")+(live||on?"":" off")+'" data-dot="'+d.id+'"'+
+          ' style="color:'+dotVar(d.id)+'">'+
+          '<span class="dt"><b>'+d.letter+'</b></span>'+
+          '<span class="dl"><b style="color:'+(on?dotVar(d.id):"var(--ink)")+'">'+d.name+
+            (live?"":" <span style=\'font-family:var(--mono);font-size:9px;color:var(--ink-3)\'>bonus</span>")+'</b>'+
+          '<span>'+esc(why)+'</span></span>'+
+          (isAuto?'<span class="auto">auto</span>':'')+'</button>';
+      }).join("")+'</div>'+
+      (mand?'<div class="alert"><b>Never miss twice</b>Yesterday was blank. Today is mandatory — even if it is only the two-minute fallback.</div>':'')+
+      (meta.star?'<div class="alert star"><b>Gold star</b>Every available dot earned. Circle the square on the whiteboard.</div>':'')+
+    '</div>';
+
+  document.getElementById("boardBody").innerHTML =
+    '<div class="identity"><div class="id-t"><em>The frame</em>Training, not healing.</div>'+
+      '<div class="out"><b>'+monthsOut+'</b><span>months out</span></div></div>'+
+    today +
+    '<div class="card"><figcaption><div class="t">The board</div><div class="s">'+
+      'Columns are days 1–16 on the top row of each month, 17–31 on the row below — same as the whiteboard. '+
+      'Tap any square to set its dots.</div></figcaption>'+
+      legend+'<div style="height:12px"></div>'+
+      '<div class="boardscroll">'+boardGrid()+'</div></div>'+
+    '<div class="card"><h3 style="font-family:var(--serif);font-size:17px;margin:0 0 12px;font-weight:600">The three rules</h3>'+
+      '<ol class="rules">'+
+      '<li><b>Cross off the day first, then add dots.</b> The X is free — you get it just for existing. It gets you to the board even on zero-dot days.</li>'+
+      '<li><b>Never miss twice.</b> One blank square is a rest day. Two in a row is the start of a slide. After a blank day, the next day is mandatory.</li>'+
+      '<li><b>Never edit the past.</b> No filling in yesterday. The board is a record, not a scoreboard to negotiate with.</li>'+
+      '</ol></div>'+
+    '<p class="disclaimer">Part 1 of your Notion doc and Part 3 use different colour maps — Part 1 has '+
+      'BLUE as RECOVER and RED as STRENGTH, while the phase write-ups use BLUE for strength and PURPLE for sleep. '+
+      'This app follows Part 1, the sticker table, since that is the sheet you buy, and adds ORANGE for CARDIO '+
+      'from BUILD onward. Worth settling before you write the legend on the whiteboard.</p>';
+
+  document.getElementById("xtoggle").onclick=()=>{
+    state.board[iso] = state.board[iso]||{};
+    state.board[iso].x = !state.board[iso].x;
+    save(); renderBoard(); renderLedger();
+  };
+  document.querySelectorAll("#boardBody [data-dot]").forEach(b=>{
+    b.onclick=()=>toggleDot(iso, b.dataset.dot);
+  });
+  document.querySelectorAll("#boardBody [data-cell]").forEach(b=>{
+    b.onclick=()=>openDay(b.dataset.cell);
+  });
+}
+function toggleDot(iso,id){
+  const {dots} = dayDots(iso);
+  state.board[iso] = state.board[iso]||{};
+  state.board[iso].dots = state.board[iso].dots||{};
+  state.board[iso].dots[id] = !dots[id];
+  save(); renderAll();
+  toast(DOT_BY[id].name+(!dots[id]?" earned":" cleared"));
+}
+function boardGrid(){
+  const months=[];
+  let y=2026,m=8;
+  while(y<2027 || m<=3){
+    months.push([y,m]);
+    m++; if(m>12){ m=1; y++; }
+    if(y===2027 && m>3) break;
+  }
+  const today=todayISO();
+  const rowFor=(y,m,from,to)=>{
+    const dim=new Date(y,m,0).getDate();
+    let tds="";
+    for(let i=0;i<16;i++){
+      const d=from+i;
+      if(d>to || d>dim){ tds+='<td class="cell empty"></td>'; continue; }
+      const iso=y+"-"+pad2(m)+"-"+pad2(d);
+      const before = iso<INJURY, future = iso>today;
+      const meta = before||future ? null : dayMeta(iso);
+      const ph = phaseOn(iso);
+      const phaseStart = iso===ph.from && ph.from!==INJURY;
+      const cls=["cell"];
+      if(before||future) cls.push("future");
+      if(meta&&meta.x) cls.push("xd");
+      if(meta&&meta.star) cls.push("star");
+      if(iso===today) cls.push("today");
+      if(iso===INJURY) cls.push("injury");
+      if(phaseStart) cls.push("phasestart");
+      const dotsHtml = meta ? '<span class="dotgrid">'+DOTS.map(dd=>
+        '<i style="background:'+(meta.dots[dd.id]?dotVar(dd.id):"transparent")+'"></i>').join("")+'</span>' : "";
+      const wave = iso===GOAL ? '<span class="goalwave">🌊</span>' : "";
+      const star = meta&&meta.star ? '<span class="goalwave" style="font-size:9px;top:auto;bottom:1px;align-items:end">★</span>' : "";
+      tds+='<td class="'+cls.join(" ")+'"><button data-cell="'+iso+'" aria-label="'+esc(longDate(iso))+'">'+
+        '<span class="dnum">'+d+'</span>'+dotsHtml+wave+star+'</button></td>';
+    }
+    return tds;
+  };
+  return '<table class="board">'+months.map(([y,m])=>{
+    const st=monthStats(y,m);
+    const label=MON[m-1].toUpperCase();
+    const bench=BENCH[y+"-"+pad2(m)];
+    return '<tr><th class="mo" rowspan="2">'+label+" ’"+String(y).slice(2)+
+      '<em>'+(st.perfect?st.perfect+" perfect":"")+(st.marked?(st.perfect?" · ":"")+st.marked+" marked":"")+'</em></th>'+
+      rowFor(y,m,1,16)+'<td class="monthrow-stat" rowspan="2">'+
+      (st.dots?'<b>'+st.dots+'</b> dots<br>':'')+(bench?esc(bench.split(";")[0]):'')+'</td></tr>'+
+      '<tr>'+rowFor(y,m,17,31)+'</tr>';
+  }).join("")+'</table>';
+}
+function openDay(iso){
+  const meta=dayMeta(iso), past = iso<todayISO(), st=dayStats(iso);
+  showSheet('<h3>'+esc(dow(iso))+", "+esc(longDate(iso))+'</h3>'+
+    '<p class="sh-sub">Day '+daysBetween(INJURY,iso)+' · '+esc(phaseOn(iso).name)+'</p>'+
+    (past?'<div class="alert"><b>Rule 3 — never edit the past</b>The board is a record, not a scoreboard to negotiate with. Change this only to correct a genuine mistake.</div><div style="height:13px"></div>':'')+
+    '<button class="xrow'+(meta.x?" on":"")+'" id="dx" style="width:100%"><span class="xbox">✕</span>'+
+      '<span class="xt"><b>'+(meta.x?"Crossed off":"Cross off the day")+'</b><span>Attendance precedes performance.</span></span></button>'+
+    '<div class="dotlist">'+DOTS.map(d=>{
+      const live=meta.live.includes(d.id), on=meta.dots[d.id];
+      return '<button class="dotrow'+(on?" on":"")+(live||on?"":" off")+'" data-dd="'+d.id+'"'+
+        ' style="color:'+dotVar(d.id)+'"><span class="dt"><b>'+d.letter+'</b></span>'+
+        '<span class="dl"><b style="color:'+(on?dotVar(d.id):"var(--ink)")+'">'+d.name+
+          (live?"":" <span style=\'font-family:var(--mono);font-size:9px;color:var(--ink-3)\'>bonus</span>")+'</b>'+
+        '<span>'+esc(live?d.earns:(on?"Bonus — not part of a full day this phase":"Not counted until "+phaseFirstLive(d.id)))+
+        '</span></span></button>';
+    }).join("")+'</div>'+
+    (st.rows.length?'<p style="font-size:12.5px;color:var(--ink-2);margin:14px 0 0">'+
+      st.rows.length+' entries logged · '+st.apap.toLocaleString()+' mg acetaminophen'+
+      (st.sleepH!=null?' · '+st.sleepH+' h sleep':'')+'</p>':'')+
+    '<div class="btnrow"><button class="btn" id="cancel">Done</button></div>');
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("dx").onclick=()=>{
+    state.board[iso]=state.board[iso]||{}; state.board[iso].x=!state.board[iso].x;
+    save(); renderAll(); openDay(iso);
+  };
+  document.querySelectorAll("#sheet [data-dd]").forEach(b=>
+    b.onclick=()=>{ toggleDot(iso,b.dataset.dd); openDay(iso); });
+}
+
+/* ════════ 3 · LEDGER ════════ */
+function renderLedger(){
+  const host=document.getElementById("ledger"), dates=allDates();
+  if(!dates.length){ host.innerHTML='<div class="card"><p class="muted" style="margin:0">Nothing logged yet.</p></div>'; return; }
+  host.innerHTML = dates.map(iso=>{
+    const st=dayStats(iso), meta=dayMeta(iso);
+    const rows=st.rows.slice().sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0);
+    const lvl=apapLevel(st.apap);
+    const dotsHtml = meta.earned.length ? '<span class="dots">'+meta.earned.map(id=>
+      '<i style="background:'+dotVar(id)+'" title="'+DOT_BY[id].name+'"></i>').join("")+'</span>' : "";
+    const pills=[
+      meta.star?'<span class="pill" style="background:var(--sand-soft);color:var(--sand);border-color:var(--sand)">★ perfect</span>':'',
+      st.apap?'<span class="pill '+lvl+'">APAP '+st.apap.toLocaleString()+' mg</span>':'',
+      st.opioid?'<span class="pill neutral">Opioid × '+(Math.round(st.opioid*10)/10)+'</span>':'',
+      st.sleepH!=null?'<span class="pill '+(st.sleepH<7?"warn":"good")+'">Sleep '+st.sleepH+' h</span>':''
+    ].join(" ");
+    let lastTod="";
+    const body=rows.map(e=>{
+      const c=BY_ID[e.id]||{em:"•",name:e.id,fx:"",unit:""};
+      const tod=timeOfDay(e.time), tag=tod!==lastTod?'<span class="tod">'+tod+'</span>':''; lastTod=tod;
+      const mg=apapMg(e);
+      return '<tr><td class="t">'+h12(e.time)+tag+'</td>'+
+        '<td class="q">'+(c.unit===""?"—":fmtQty(e.q,c.unit))+'</td>'+
+        '<td class="n">'+c.em+' '+esc(c.name)+
+          (c.common&&c.common!=="—"?'<em>'+esc(c.common)+(c.dose&&c.dose!=="—"?' · '+esc(c.dose):'')+'</em>':'')+'</td>'+
+        '<td class="e"><span class="pill neutral">'+esc(c.fx||"—")+'</span>'+
+          (c.dot?' <span class="pill" style="border-color:'+dotVar(c.dot)+';color:'+dotVar(c.dot)+'">'+DOT_BY[c.dot].name+'</span>':'')+
+          (mg?'<br><span class="mono" style="font-size:10px;color:var(--ink-3)">'+mg.toLocaleString()+' mg APAP</span>':'')+'</td>'+
+        '<td class="no">'+(e.note?esc(e.note):'<span class="muted">—</span>')+'</td>'+
+        '<td class="x"><button class="del" data-del="'+e.uid+'" aria-label="Delete entry">✕</button></td></tr>';
+    }).join("");
+    const dnote=st.daily.note?'<tr><td class="t muted">—</td><td class="q">—</td>'+
+      '<td class="n">🌙 Sleep report<em>Oura</em></td><td class="e"><span class="pill neutral">Metrics</span></td>'+
+      '<td class="no">'+esc(st.daily.note)+'</td><td class="x"></td></tr>':'';
+    return '<div class="day"><div class="dayhd"><h3>'+esc(longDate(iso))+'</h3>'+
+      '<span class="dow">'+esc(dow(iso))+' · day '+daysBetween(INJURY,iso)+'</span>'+dotsHtml+
+      '<span class="sp"></span>'+pills+'</div>'+
+      '<div class="tblbox"><table class="log"><thead><tr><th>Time</th><th>Qty</th>'+
+      '<th>Drug / compound / activity</th><th>Desired effect</th><th>Notes</th><th></th></tr></thead>'+
+      '<tbody>'+body+dnote+'</tbody></table></div></div>';
+  }).join("");
+  host.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>{
+    state.entries=state.entries.filter(e=>e.uid!==b.dataset.del); save(); renderAll(); toast("Entry removed"); });
+}
+function buildCSV(){
+  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const lines=[["Date","Day of week","Day since injury","Phase","Time","Time of day","Quantity","Unit",
+    "Drug / compound / activity","Common name","Strength","Class","Desired effect","Sticker dot",
+    "Acetaminophen (mg)","Opioid dose","Notes"].map(q).join(",")];
+  state.entries.slice().sort((a,b)=>(b.date+b.time)<(a.date+a.time)?-1:(b.date+b.time)>(a.date+a.time)?1:0)
+    .forEach(e=>{
+      const c=BY_ID[e.id]||{}, g=GROUPS.find(x=>x.id===c.g);
+      lines.push([e.date,dow(e.date),daysBetween(INJURY,e.date),phaseOn(e.date).name,e.time,timeOfDay(e.time),
+        e.q,c.unit||"",c.name||e.id,(c.common&&c.common!=="—")?c.common:"",(c.dose&&c.dose!=="—")?c.dose:"",
+        g?g.label:"",c.fx||"",c.dot?DOT_BY[c.dot].name:"",apapMg(e)||"",c.opioid?e.q:"",e.note||""].map(q).join(","));
+    });
+  lines.push("");
+  lines.push(["Date","Day of week","Phase","Crossed off","REHAB","RECOVER","FUEL","STRENGTH","SPIRITUAL","CARDIO",
+    "Dots earned","Dots available","Perfect day","Sleep (h)","Efficiency %","Resting HR","Pain 0-10","Mood 1-5",
+    "Total acetaminophen (mg)","Opioid doses","Note"].map(q).join(","));
+  allDates().forEach(iso=>{
+    const st=dayStats(iso), m=dayMeta(iso), d=st.daily;
+    const cell=id=> m.dots[id] ? (m.live.includes(id)?"1":"bonus") : "0";
+    lines.push([iso,dow(iso),phaseOn(iso).name,m.x?"X":"",cell("green"),cell("blue"),cell("yellow"),
+      cell("red"),cell("purple"),cell("orange"),m.earnedLive.length,m.live.length,m.star?"★":"",
+      d.sleepH??"",d.eff??"",d.rhr??"",d.pain??"",d.mood??"",st.apap,Math.round(st.opioid*10)/10,d.note||""].map(q).join(","));
+  });
+  return lines.join("\r\n");
+}
+
+/* ════════ 4 · DASHBOARD ════════ */
+function lastN(n){ const o=[], t=todayISO(); for(let i=n-1;i>=0;i--) o.push(addDays(t,-i)); return o; }
+function renderDash(){
+  const iso=todayISO(), st=dayStats(iso), lim=state.settings.apapLimit;
+  document.getElementById("dashDate").textContent=dow(iso)+", "+longDate(iso);
+  const lvl=apapLevel(st.apap), pct=Math.min(100,st.apap/lim*100);
+  const col=lvl==="crit"?"var(--crit)":lvl==="warn"?"var(--warn)":"var(--good)";
+  const verdict=lvl==="crit"?"Over your ceiling. Stop and call the pharmacist."
+    :lvl==="warn"?"Close to the ceiling — count what is left before the next dose."
+    :st.apap===0?"Nothing logged yet today.":"Inside the ceiling.";
+  const lastOf=id=>{ const r=state.entries.filter(e=>e.id===id)
+      .sort((a,b)=>(a.date+a.time)<(b.date+b.time)?1:-1)[0];
+    if(!r) return null; return {r, mins:Math.round((Date.now()-new Date(r.date+"T"+r.time+":00"))/6e4)}; };
+  const clock=m=>m<60?m+"m":m<2880?Math.floor(m/60)+"h "+(m%60)+"m":Math.floor(m/1440)+" days";
+  const lA=lastOf("apap"), lH=lastOf("hydro");
+  const d14=lastN(14).map(dayStats), d7=d14.slice(-7);
+  const sleepVals=d7.map(x=>x.sleepH).filter(v=>v!=null);
+  const avg7=sleepVals.length?sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length:null;
+  const op7=d7.reduce((a,b)=>a+b.opioid,0), opPrev=lastN(14).slice(0,7).map(dayStats).reduce((a,b)=>a+b.opioid,0);
+  const dots7=lastN(7).reduce((a,d)=>a+dayMeta(d).earnedLive.length,0);
+  const bonus7=lastN(7).reduce((a,d)=>a+dayMeta(d).bonus.length,0);
+  const avail7=lastN(7).filter(d=>d>=INJURY&&d<=iso).reduce((a,d)=>a+dayMeta(d).live.length,0);
+  const overDays=d14.filter(x=>x.apap>lim).length, apapDays=d14.filter(x=>x.apap>0).length;
+  const ph=phaseOn(iso);
+
+  const tiles=[
+    {k:"Since the break", v:daysBetween(INJURY,iso), s:"days", d:"Femur fractured "+longDate(INJURY)},
+    {k:"To Hawaii", v:daysBetween(iso,GOAL), s:"days", d:longDate(GOAL)+", 2027"},
+    {k:"Dots this week", v:dots7, s:"/ "+avail7, d:(avail7?Math.round(dots7/avail7*100)+"% of available dots":"—")+(bonus7?" · +"+bonus7+" bonus":"")},
+    {k:"Dot streak", v:dotStreak(), s:"days", d:"consecutive days with at least one dot"},
+    {k:"Last acetaminophen", v:lA?clock(lA.mins):"—", s:"", d:"4 h between doses is the usual floor"},
+    {k:"Last hydromorphone", v:lH?clock(lH.mins):"—", s:"", d:"the number you want climbing"},
+    {k:"Opioid doses, 7 days", v:Math.round(op7*10)/10, s:"", d:trend(op7,opPrev)},
+    {k:"Avg sleep, 7 days", v:avg7!=null?avg7.toFixed(1):"—", s:avg7!=null?"h":"", d:avg7!=null&&avg7<7?"under the 7 h that earns RECOVER":"earning RECOVER"},
+    {k:"Days over ceiling, 14", v:overDays, s:"/ "+apapDays, d:"days above "+lim.toLocaleString()+" mg"}
+  ];
+
+  document.getElementById("dashBody").innerHTML=
+    '<div class="hero"><span class="lbl">Acetaminophen today · all sources</span>'+
+      '<div class="big" style="color:'+col+'">'+st.apap.toLocaleString()+
+        ' <span class="of">/ '+lim.toLocaleString()+' mg</span></div>'+
+      '<div class="meter"><i style="width:'+pct+'%;background:'+col+'"></i><span class="tick" style="left:75%"></span></div>'+
+      '<p class="note">'+esc(verdict)+' Counts plain Tylenol at '+state.settings.apapTab+
+      ' mg a tablet plus 300 mg in every Tylenol No. 3. '+(st.codeine?'Codeine today: '+st.codeine+' mg. ':'')+
+      '<button class="del" id="editLimit" style="opacity:1;color:var(--accent);font-size:12px;font-family:var(--mono)">edit strengths</button></p></div>'+
+    '<div class="tiles">'+tiles.map(t=>'<div class="stat"><span class="k">'+esc(t.k)+'</span>'+
+      '<div class="v">'+esc(String(t.v))+(t.s?' <small>'+esc(t.s)+'</small>':'')+'</div>'+
+      '<div class="d">'+esc(t.d)+'</div></div>').join("")+'</div>'+
+    '<div class="card"><figure><figcaption><div class="t">Daily acetaminophen, 14 days</div>'+
+      '<div class="s">Dashed line is your '+lim.toLocaleString()+' mg ceiling</div></figcaption>'+
+      '<div class="chartbox">'+apapChart(d14,lim)+'</div>'+
+      '<div class="legend"><span><i style="background:var(--good)"></i>Under 75% of ceiling</span>'+
+      '<span><i style="background:var(--warn)"></i>75–100%</span>'+
+      '<span><i style="background:var(--crit)"></i>Over ceiling</span>'+
+      '<span><i class="ln"></i>Ceiling</span></div></figure></div>'+
+    '<div class="card"><figure><figcaption><div class="t">Sleep, 14 days</div>'+
+      '<div class="s">7 hours earns the RECOVER dot. Bone healing happens largely in slow-wave sleep.</div></figcaption>'+
+      '<div class="chartbox">'+sleepChart(d14)+'</div></figure></div>'+
+    '<div class="card"><figure><figcaption><div class="t">Dots earned, 14 days</div>'+
+      '<div class="s">Stacked by category, fixed order — same slots as the board</div></figcaption>'+
+      '<div class="chartbox">'+dotChart(lastN(14))+'</div>'+
+      '<div class="legend">'+DOTS.map(d=>'<span><i style="background:'+dotVar(d.id)+'"></i>'+d.name+'</span>').join("")+
+      '</div></figure></div>'+
+    '<div class="card"><span class="lbl mono" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)">Current phase</span>'+
+      '<h3 style="font-family:var(--serif);font-size:19px;margin:6px 0 3px;font-weight:600">'+ph.em+' '+esc(ph.name)+'</h3>'+
+      '<p style="margin:0 0 10px;font-size:13px;color:var(--ink-2)">'+esc(ph.job)+'</p>'+
+      '<p class="mono" style="margin:0;font-size:11px;color:var(--ink-3)">'+esc(shortDate(ph.from))+' → '+esc(shortDate(ph.to))+
+      ' · '+ph.ms.filter(m=>state.done[ph.id+"|"+m]).length+' of '+ph.ms.length+' milestones ticked</p></div>'+
+    '<p class="disclaimer">Totals are only as good as what you log. 4,000 mg a day is the common adult '+
+    'acetaminophen maximum; clinicians often set 3,000 mg or lower with alcohol, liver concerns, or long courses. '+
+    'Confirm yours and set it here.</p>';
+  const el=document.getElementById("editLimit"); if(el) el.onclick=openSettings;
+  wireHover();
+}
+function trend(now,prev){
+  if(!prev&&!now) return "none either week";
+  if(!prev) return "up from none last week";
+  const pc=Math.round((now-prev)/prev*100);
+  if(!pc) return "flat on last week";
+  return (pc>0?"up ":"down ")+Math.abs(pc)+"% on last week"+(pc<0?" — good":"");
+}
+function openSettings(){
+  showSheet('<h3>⚙️ Dose strengths</h3><p class="sh-sub">Set these to what is actually in your bottle</p>'+
+    '<div class="field"><label>Tylenol tablet strength (mg)</label><input type="number" id="tab" step="25" value="'+state.settings.apapTab+'"></div>'+
+    '<div class="field"><label>Daily acetaminophen ceiling (mg)</label><input type="number" id="lim" step="500" value="'+state.settings.apapLimit+'"></div>'+
+    '<p style="font-size:12.5px;color:var(--ink-2);margin:0 0 14px">Extra Strength is 500 mg, Regular is 325 mg, '+
+    'Arthritis is 650 mg. The usual adult ceiling is 4,000 mg; many clinicians set 3,000 mg for extended use.</p>'+
+    '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="ok">Save</button></div>');
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=()=>{
+    state.settings.apapTab=Number(document.getElementById("tab").value)||500;
+    state.settings.apapLimit=Number(document.getElementById("lim").value)||4000;
+    save(); closeSheet(); renderAll(); toast("Strengths updated");
+  };
+}
+function topRound(x,y,w,h,r){ r=Math.max(0,Math.min(r,w/2,h));
+  return "M"+x+","+(y+h)+"V"+(y+r)+"a"+r+","+r+" 0 0 1 "+r+",-"+r+"h"+(w-2*r)+"a"+r+","+r+" 0 0 1 "+r+","+r+"V"+(y+h)+"Z"; }
+function apapChart(days,lim){
+  const W=640,H=190,mL=44,mR=10,mT=14,mB=26,iw=W-mL-mR,ih=H-mT-mB;
+  const max=Math.max(lim*1.15,...days.map(d=>d.apap))||lim, y=v=>mT+ih-(v/max)*ih, bw=iw/days.length;
+  const g=[0,lim/2,lim].map(v=>'<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+
+    '" stroke="var(--grid)" stroke-width="1"/><text x="'+(mL-7)+'" y="'+(y(v)+3.5).toFixed(1)+
+    '" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+(v>=1000?(v/1000)+"k":v)+'</text>').join("");
+  const bars=days.map((d,i)=>{ if(!d.apap) return "";
+    const lv=apapLevel(d.apap), c=lv==="crit"?"var(--crit)":lv==="warn"?"var(--warn)":"var(--good)";
+    return '<path d="'+topRound(mL+i*bw+2,y(d.apap),bw-4,mT+ih-y(d.apap),4)+'" fill="'+c+'"/>'; }).join("");
+  const hits=days.map((d,i)=>'<rect x="'+(mL+i*bw)+'" y="'+mT+'" width="'+bw+'" height="'+ih+'" fill="transparent" '+
+    'data-tip="'+esc(shortDate(d.iso))+'|'+d.apap.toLocaleString()+' mg|'+(d.apap>lim?"over ceiling":(d.apap?"":"nothing logged"))+'"/>').join("");
+  const lab=days.map((d,i)=>(i%3===0||i===days.length-1)?'<text x="'+(mL+i*bw+bw/2).toFixed(1)+'" y="'+(H-8)+
+    '" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+parseISO(d.iso).getDate()+'</text>':'').join("");
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Daily acetaminophen against the ceiling, 14 days">'+
+    g+bars+'<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(lim).toFixed(1)+'" y2="'+y(lim).toFixed(1)+
+    '" stroke="var(--ink-3)" stroke-width="2" stroke-dasharray="5 4"/>'+lab+hits+'</svg>';
+}
+function sleepChart(days){
+  const W=640,H=170,mL=34,mR=10,mT=14,mB=26,iw=W-mL-mR,ih=H-mT-mB,max=10;
+  const y=v=>mT+ih-(v/max)*ih, x=i=>mL+(days.length===1?iw/2:(i/(days.length-1))*iw);
+  const pts=days.map((d,i)=>d.sleepH!=null?{i,v:d.sleepH,iso:d.iso}:null).filter(Boolean);
+  const g=[0,3,6,9].map(v=>'<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+
+    '" stroke="var(--grid)" stroke-width="1"/><text x="'+(mL-7)+'" y="'+(y(v)+3.5).toFixed(1)+
+    '" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+v+'</text>').join("");
+  const band='<rect x="'+mL+'" y="'+y(9)+'" width="'+iw+'" height="'+(y(7)-y(9))+'" fill="var(--d-blue)" opacity=".12"/>'+
+    '<text x="'+(W-mR-2)+'" y="'+(y(9)-4)+'" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">7–9 h · RECOVER dot</text>';
+  if(!pts.length) return '<svg class="chart" viewBox="0 0 '+W+' '+H+'">'+band+g+'<text x="'+(W/2)+'" y="'+(H/2)+
+    '" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-3)">no sleep logged yet</text></svg>';
+  const line=pts.map((p,k)=>(k?"L":"M")+x(p.i).toFixed(1)+","+y(p.v).toFixed(1)).join(" ");
+  const area=line+" L"+x(pts[pts.length-1].i).toFixed(1)+","+(mT+ih)+" L"+x(pts[0].i).toFixed(1)+","+(mT+ih)+" Z";
+  const dots=pts.map((p,k)=>{ const last=k===pts.length-1;
+    return '<circle cx="'+x(p.i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="'+(last?5:4)+'" fill="'+
+      (last?"var(--accent)":"var(--surface)")+'" stroke="var(--accent)" stroke-width="2"/>'+
+      '<circle cx="'+x(p.i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="11" fill="transparent" data-tip="'+
+      esc(shortDate(p.iso))+'|'+p.v+' h|'+(p.v>=7?"":"short of RECOVER")+'"/>'; }).join("");
+  const lab=days.map((d,i)=>(i%3===0||i===days.length-1)?'<text x="'+x(i).toFixed(1)+'" y="'+(H-8)+
+    '" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+parseISO(d.iso).getDate()+'</text>':'').join("");
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Nightly sleep hours, 14 days">'+
+    band+g+'<path d="'+area+'" fill="var(--accent)" opacity=".13"/>'+
+    '<path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
+    dots+lab+'</svg>';
+}
+function dotChart(isos){
+  const W=640,H=160,mL=28,mR=10,mT=14,mB=26,iw=W-mL-mR,ih=H-mT-mB,max=6;
+  const y=v=>mT+ih-(v/max)*ih, bw=iw/isos.length;
+  const g=[0,2,4,6].map(v=>'<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+
+    '" stroke="var(--grid)" stroke-width="1"/><text x="'+(mL-7)+'" y="'+(y(v)+3.5).toFixed(1)+
+    '" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+v+'</text>').join("");
+  const seg=isos.map((iso,i)=>{
+    if(iso<INJURY||iso>todayISO()) return "";
+    const m=dayMeta(iso); let k=0;
+    return DOTS.filter(d=>m.dots[d.id]).map(d=>{
+      const h=(ih/max), yy=mT+ih-(k+1)*h+1; k++;
+      return '<rect x="'+(mL+i*bw+2)+'" y="'+yy.toFixed(1)+'" width="'+(bw-4)+'" height="'+(h-2).toFixed(1)+
+        '" rx="2" fill="'+dotVar(d.id)+'"/>';
+    }).join("");
+  }).join("");
+  const hits=isos.map((iso,i)=>{
+    const m=(iso<INJURY||iso>todayISO())?null:dayMeta(iso);
+    return '<rect x="'+(mL+i*bw)+'" y="'+mT+'" width="'+bw+'" height="'+ih+'" fill="transparent" data-tip="'+
+      esc(shortDate(iso))+'|'+(m?m.earned.length+" / "+m.live.length+" dots":"—")+'|'+(m&&m.star?"perfect day":"")+'"/>';
+  }).join("");
+  const lab=isos.map((iso,i)=>(i%3===0||i===isos.length-1)?'<text x="'+(mL+i*bw+bw/2).toFixed(1)+'" y="'+(H-8)+
+    '" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+parseISO(iso).getDate()+'</text>':'').join("");
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Sticker dots earned per day, 14 days">'+
+    g+seg+lab+hits+'</svg>';
+}
+function wireHover(){
+  const tip=document.getElementById("tip");
+  document.querySelectorAll("svg.chart [data-tip]").forEach(el=>{
+    const show=ev=>{
+      const [a,b,c]=el.dataset.tip.split("|");
+      tip.innerHTML='<b>'+esc(a)+'</b><div class="tv">'+esc(b)+'</div>'+
+        (c?'<div style="font-size:11px;margin-top:2px;color:var(--ink-2)">'+esc(c)+'</div>':'');
+      tip.classList.add("on");
+      const p=ev.touches?ev.touches[0]:ev, w=tip.offsetWidth;
+      tip.style.left=Math.max(8,Math.min(window.innerWidth-w-8,p.clientX-w/2))+"px";
+      tip.style.top=Math.max(8,p.clientY-tip.offsetHeight-14)+"px";
+    };
+    el.addEventListener("mouseenter",show); el.addEventListener("mousemove",show);
+    el.addEventListener("touchstart",show,{passive:true});
+    el.addEventListener("mouseleave",()=>tip.classList.remove("on"));
+  });
+  document.addEventListener("touchend",()=>document.getElementById("tip").classList.remove("on"),{passive:true});
+}
+
+/* ════════ 5 · PLAN ════════ */
+function renderPlan(){
+  const iso=todayISO(), cur=phaseOn(iso);
+  const toGoal=daysBetween(iso,GOAL), total=daysBetween(INJURY,GOAL), gone=daysBetween(INJURY,iso);
+  document.getElementById("planBody").innerHTML=
+    '<div class="goalcard"><h3>🏄 Surfing with your daughter</h3>'+
+      '<p>Hawaii, '+longDate(GOAL)+' 2027. '+toGoal+' days out — day '+gone+' of '+total+', '+
+      Math.round(gone/total*100)+'% of the way there. This is not a recovery. It is an eight-month training block.</p></div>'+
+    '<div class="card">'+PHASES.map(p=>{
+      const done=p.to<iso, now=p.id===cur.id;
+      const cls=p.goal?"goal":now?"now":done?"done":"";
+      const t=p.ms.filter(m=>state.done[p.id+"|"+m]).length;
+      return '<div class="phase '+cls+'"><h4>'+p.em+' '+esc(p.name)+
+        (now?' <span class="pill accent">you are here</span>':'')+
+        ' <span class="pill neutral">'+t+'/'+p.ms.length+'</span></h4>'+
+        '<div class="when">'+esc(shortDate(p.from))+' – '+esc(shortDate(p.to))+'</div>'+
+        (p.live.length?'<div class="livedots"><span>dots live:</span>'+p.live.map(id=>
+          '<i style="background:'+dotVar(id)+'" title="'+DOT_BY[id].name+'"></i>').join("")+
+          '<span>'+p.live.length+' = a full day</span></div>':'')+
+        '<p class="job">'+esc(p.job)+'</p>'+
+        (p.detail?'<p>'+esc(p.detail)+'</p>':'')+
+        (p.why?'<p style="border-left:2px solid var(--sand);padding-left:11px;color:var(--ink-2)">'+esc(p.why)+'</p>':'')+
+        '<ul class="ms">'+p.ms.map((m,i)=>{
+          const k=p.id+"|"+m, on=!!state.done[k], id2="ms_"+p.id+"_"+i;
+          return '<li class="'+(on?"checked":"")+'"><input type="checkbox" id="'+id2+'" data-ms="'+esc(k)+'"'+
+            (on?" checked":"")+'><label for="'+id2+'">'+esc(m)+'</label></li>';
+        }).join("")+'</ul></div>';
+    }).join("")+'</div>'+
+    '<div class="card"><h3 style="font-family:var(--serif);font-size:17px;margin:0 0 4px;font-weight:600">The monthly test</h3>'+
+      '<p style="font-size:13px;color:var(--ink-2);margin:0 0 12px">Dots tell you whether you showed up. '+
+      'A number tells you whether it is working. Run these on the 1st.</p>'+
+      '<ul class="ms">'+Object.entries(BENCH).map(([k,v])=>{
+        const [y,m]=k.split("-");
+        return '<li><input type="checkbox" id="b_'+k+'" data-bench="'+k+'"'+(state.bench[k]?" checked":"")+
+          '><label for="b_'+k+'"><b class="mono" style="color:var(--ink)">'+MON[+m-1].slice(0,3)+" 1</b> — "+esc(v)+'</label></li>';
+      }).join("")+'</ul></div>'+
+    '<div class="card"><h3 style="font-family:var(--serif);font-size:17px;margin:0 0 12px;font-weight:600">Setup checklist</h3>'+
+      '<ul class="ms">'+["Buy quarter-inch colour-coding dots — 5 colours",
+        "Buy gold star stickers for perfect days","Attach sticker sheets to the whiteboard (clip or magnet)",
+        "Write “Training, not healing.” top-left above AUGUST","Draw phase boundary lines at G5, G9, G13",
+        "Write phase names in the A–F cells of Aug, Oct, Dec, Feb","Mark the Hawaii square in March",
+        "Choose the habit-stack anchor and write it on the board",
+        "Ask Dr. Laughren for the specific loading progression from week six",
+        "Lock in the physio referral before Oct 1"].map((m,i)=>{
+        const k="setup|"+m, on=!!state.done[k];
+        return '<li class="'+(on?"checked":"")+'"><input type="checkbox" id="su_'+i+'" data-ms="'+esc(k)+'"'+
+          (on?" checked":"")+'><label for="su_'+i+'">'+esc(m)+'</label></li>';
+      }).join("")+'</ul>'+
+      '<p style="font-size:12.5px;color:var(--ink-2);margin:12px 0 0"><b>Habit stack:</b> '+
+      '“After I take my evening meds, I put my dots on the board.” Same trigger, same time, every day.</p></div>'+
+    '<p class="disclaimer">These are calendar phases, not clinical clearance. The real gate is Sep 15, six weeks '+
+    'post-op, which falls mid-PROTECT. Loading progression is Dr. Laughren’s call based on your films. '+
+    'Never let the whiteboard override the x-ray.</p>';
+
+  document.querySelectorAll("[data-ms]").forEach(cb=> cb.onchange=()=>{
+    if(cb.checked) state.done[cb.dataset.ms]=true; else delete state.done[cb.dataset.ms];
+    save(); renderPlan(); renderDash(); });
+  document.querySelectorAll("[data-bench]").forEach(cb=> cb.onchange=()=>{
+    if(cb.checked) state.bench[cb.dataset.bench]=true; else delete state.bench[cb.dataset.bench];
+    save(); });
+}
+
+/* ════════ CHROME ════════ */
+function renderHeader(){
+  const iso=todayISO(), toGoal=daysBetween(iso,GOAL);
+  const months=Math.round(toGoal/30.44*10)/10;
+  document.getElementById("cdOut").textContent = toGoal>60 ? months : Math.max(0,toGoal);
+  document.getElementById("cdUnit").textContent = toGoal>60 ? "months out" : "days out";
+  const ph=phaseOn(iso);
+  document.getElementById("phaseName").textContent = ph.em+" "+ph.name;
+  const total=daysBetween(INJURY,GOAL), gone=Math.max(0,Math.min(total,daysBetween(INJURY,iso)));
+  document.getElementById("railFill").style.width=(gone/total*100)+"%";
+}
+function renderAll(){ renderHeader(); renderBoard(); renderLedger(); renderDash(); renderPlan(); }
+
+document.querySelectorAll("nav.tabs button").forEach(b=> b.onclick=()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".screen").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); document.getElementById("s-"+b.dataset.tab).classList.add("on");
+  window.scrollTo({top:0,behavior:"instant"});
+});
+document.getElementById("themeBtn").onclick=()=>{
+  const c=document.documentElement.getAttribute("data-theme");
+  const n=c==="light"?"dark":c==="dark"?null:"light";
+  if(n) document.documentElement.setAttribute("data-theme",n);
+  else document.documentElement.removeAttribute("data-theme");
+  state.settings.theme=n; save();
+  toast(n?n[0].toUpperCase()+n.slice(1)+" theme":"Following your system theme");
+};
+document.getElementById("copyCsv").onclick=async()=>{
+  const csv=buildCSV();
+  try{ await navigator.clipboard.writeText(csv); toast("CSV copied — paste into Sheets or Excel"); }
+  catch(e){
+    showSheet('<h3>CSV</h3><p class="sh-sub">Select all and copy</p>'+
+      '<textarea class="csvout" readonly>'+esc(csv)+'</textarea>'+
+      '<div class="btnrow"><button class="btn" id="cancel">Done</button></div>');
+    document.getElementById("cancel").onclick=closeSheet;
+    sheet.querySelector("textarea").select();
+  }
+};
+function offerFile(text,name,type){
+  try{
+    const url=URL.createObjectURL(new Blob([text],{type}));
+    const a=document.createElement("a"); a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000); toast("Saved "+name);
+  }catch(e){ toast("Download blocked here — use Copy CSV"); }
+}
+document.getElementById("dlCsv").onclick=()=>offerFile(buildCSV(),"recovery-log-"+todayISO()+".csv","text/csv");
+document.getElementById("backupBtn").onclick=()=>offerFile(JSON.stringify(state,null,2),"recovery-backup-"+todayISO()+".json","application/json");
+document.getElementById("restoreBtn").onclick=()=>{
+  showSheet('<h3>Restore from backup</h3><p class="sh-sub">Paste a backup JSON — this replaces everything</p>'+
+    '<textarea class="csvout" id="rj" placeholder="{ ... }"></textarea>'+
+    '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button>'+
+    '<button class="btn danger" id="ok">Replace</button>'+
+    '<button class="btn ghost" id="reseed">Reset to seed</button></div>');
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("reseed").onclick=()=>{ state=seedState(); save(); closeSheet(); renderAll(); toast("Reset to the Notion seed data"); };
+  document.getElementById("ok").onclick=()=>{
+    try{ const o=JSON.parse(document.getElementById("rj").value); if(!o.entries) throw 0;
+      state=migrate(o); save(); closeSheet(); renderAll(); toast("Restored");
+    }catch(e){ toast("That is not a valid backup file"); }
+  };
+};
+
+if(state.settings && state.settings.theme) document.documentElement.setAttribute("data-theme",state.settings.theme);
+renderCatalog();
+renderAll();
+</script>
