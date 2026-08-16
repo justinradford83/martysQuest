@@ -1441,7 +1441,24 @@ document.getElementById("copyCsv").onclick=async()=>{
     sheet.querySelector("textarea").select();
   }
 };
-function offerFile(text,name,type){
+/* Saves through the host when the page is running as a published artifact
+   (the viewer confirms the file), and falls back to a plain blob link when
+   the file is opened locally or served from the repo. */
+async function offerFile(text,name,type){
+  const dl = (typeof claude!=="undefined" && claude.use) ? await claude.use("downloads") : null;
+  if(dl){
+    try{ await dl.save({filename:name, data:text}); toast("Saved "+name); }
+    catch(err){
+      const code = err && err.code;
+      if(code==="declined") return;
+      if(code==="extension_not_enabled" || code==="rejected_extension"){
+        const alt = name.replace(/\.[^.]+$/,".txt");
+        try{ await dl.save({filename:alt, data:text}); toast("Saved "+alt); return; }catch(e2){}
+      }
+      toast(code==="too_large" ? "File is too large to save" : "Could not save — use Copy CSV instead");
+    }
+    return;
+  }
   try{
     const url=URL.createObjectURL(new Blob([text],{type}));
     const a=document.createElement("a"); a.href=url; a.download=name;
