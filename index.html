@@ -71,9 +71,12 @@ header{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--groun
   flex:1;line-height:1.15;text-wrap:balance}
 .hd h1 small{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--ink-3);font-weight:500;margin-bottom:3px}
-.countdown{text-align:right;font-family:var(--mono);line-height:1.1;flex:none}
+.countdown{text-align:right;font-family:var(--mono);line-height:1.1;flex:none;
+  background:none;border:0;padding:2px 0 2px 4px;border-radius:var(--r-sm)}
+.countdown:hover{background:var(--surface-2)}
 .countdown b{display:block;font-size:20px;color:var(--sand);font-weight:600;font-variant-numeric:tabular-nums}
 .countdown span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.countdown span::after{content:" ▾";opacity:.7}
 .iconbtn{background:none;border:1px solid var(--line);border-radius:var(--r-sm);width:32px;height:32px;
   display:grid;place-items:center;flex:none;color:var(--ink-2);font-size:14px}
 .iconbtn:hover{background:var(--surface-2);color:var(--ink)}
@@ -158,9 +161,25 @@ textarea{resize:vertical;min-height:60px;font-size:14px}
 .identity .id-t{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.01em;flex:1;min-width:190px}
 .identity .id-t em{font-style:normal;color:var(--ink-3);display:block;font-family:var(--mono);
   font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px}
-.identity .out{font-family:var(--mono);text-align:right}
-.identity .out b{display:block;font-size:26px;color:var(--accent);font-weight:600}
+.identity .out{font-family:var(--mono);text-align:right;background:none;border:1px solid transparent;
+  padding:6px 9px;border-radius:var(--r-sm)}
+.identity .out:hover{border-color:var(--line);background:var(--surface-2)}
+.identity .out b{display:block;font-size:26px;color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
 .identity .out span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.identity .out span::after{content:" ▾";opacity:.7}
+
+/* time-unit picker */
+.unitrow{display:flex;align-items:center;gap:13px;padding:12px 13px;border:1px solid var(--line-soft);
+  border-radius:var(--r);background:var(--surface-2);text-align:left;width:100%}
+.unitrow:hover{border-color:var(--line)}
+.unitrow.on{border-color:var(--accent);background:var(--accent-soft)}
+.unitrow .uv{font-family:var(--mono);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;
+  min-width:64px;color:var(--ink)}
+.unitrow.on .uv{color:var(--accent)}
+.unitrow .ul{flex:1;min-width:0}
+.unitrow .ul b{display:block;font-size:14px;font-weight:600}
+.unitrow .ul span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3)}
 
 /* today card */
 .todaycard{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-lg);
@@ -365,7 +384,8 @@ nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
 <header>
   <div class="wrap hd">
     <h1><small>Training, not healing</small><span id="phaseName">—</span></h1>
-    <div class="countdown"><b id="cdOut">—</b><span id="cdUnit">months out</span></div>
+    <button class="countdown" id="cdBtn" title="Change how recovery time is counted">
+      <b id="cdOut">—</b><span id="cdUnit">days out</span></button>
     <button class="iconbtn" id="themeBtn" title="Switch theme" aria-label="Switch theme">◐</button>
   </div>
   <div class="rail"><i id="railFill" style="width:0%"></i></div>
@@ -688,6 +708,7 @@ function load(){
 function migrate(o){
   o.entries ||= []; o.daily ||= {}; o.done ||= {}; o.board ||= {}; o.bench ||= {};
   o.settings ||= {apapTab:500, apapLimit:4000, theme:null};
+  o.settings.timeUnit ||= "days";
   return o;
 }
 function seedState(){
@@ -695,7 +716,7 @@ function seedState(){
     entries: SEED_ENTRIES.map((e,i)=>({uid:"s"+i, ...e})),
     daily: JSON.parse(JSON.stringify(SEED_DAILY)),
     done:{}, board:{}, bench:{},
-    settings:{apapTab:500, apapLimit:4000, theme:null}
+    settings:{apapTab:500, apapLimit:4000, theme:null, timeUnit:"days"}
   };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
@@ -731,6 +752,37 @@ function liveDots(iso){
   const p = phaseOn(iso);
   return p.goal ? PHASES[PHASES.length-2].live : p.live;
 }
+/* ── recovery time, countable in days / weeks / months ── */
+const TIME_UNITS = [
+  {id:"days",   label:"Days",   plural:"days out",   per:1,       dec:0},
+  {id:"weeks",  label:"Weeks",  plural:"weeks out",  per:7,       dec:1},
+  {id:"months", label:"Months", plural:"months out", per:30.4375, dec:1}
+];
+function unitVal(u, days){ const v = days/u.per; return u.dec ? Math.round(v*10)/10 : Math.round(v); }
+function remaining(){
+  const days = Math.max(0, daysBetween(todayISO(), GOAL));
+  const u = TIME_UNITS.find(x=>x.id===state.settings.timeUnit) || TIME_UNITS[0];
+  const value = unitVal(u, days);
+  return {days, unit:u, value, label:value+" "+u.plural};
+}
+function openTimeUnit(){
+  const days = Math.max(0, daysBetween(todayISO(), GOAL));
+  const cur = (state.settings.timeUnit || "days");
+  showSheet('<h3>⏳ Recovery time</h3>'+
+    '<p class="sh-sub">Counting to '+esc(longDate(GOAL))+' 2027</p>'+
+    '<div class="dotlist">'+TIME_UNITS.map(u=>
+      '<button class="unitrow'+(u.id===cur?" on":"")+'" data-unit="'+u.id+'">'+
+      '<span class="uv">'+unitVal(u,days)+'</span>'+
+      '<span class="ul"><b>'+u.label+'</b><span>'+u.plural+'</span></span>'+
+      (u.id===cur?'<span class="pill accent">current</span>':'')+'</button>').join("")+'</div>'+
+    '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button></div>');
+  document.getElementById("cancel").onclick=closeSheet;
+  document.querySelectorAll("#sheet [data-unit]").forEach(b=> b.onclick=()=>{
+    state.settings.timeUnit = b.dataset.unit; save(); closeSheet(); renderAll();
+    toast("Counting in "+b.dataset.unit);
+  });
+}
+
 /* first phase in which a dot counts toward a full day */
 function phaseFirstLive(id){
   const p = PHASES.find(x=>x.live.includes(id));
@@ -935,7 +987,7 @@ function openCheckin(){
 /* ════════ 2 · BOARD ════════ */
 function renderBoard(){
   const iso=todayISO(), meta=dayMeta(iso), ph=phaseOn(iso);
-  const toGoal=daysBetween(iso,GOAL), monthsOut=Math.round(toGoal/30.44*10)/10;
+  const r=remaining();
   const streak=dotStreak(), mand=mandatoryToday();
 
   const legend='<div class="legendbar">'+DOTS.map(d=>
@@ -974,7 +1026,8 @@ function renderBoard(){
 
   document.getElementById("boardBody").innerHTML =
     '<div class="identity"><div class="id-t"><em>The frame</em>Training, not healing.</div>'+
-      '<div class="out"><b>'+monthsOut+'</b><span>months out</span></div></div>'+
+      '<button class="out" id="outBtn" title="Change how recovery time is counted">'+
+      '<b>'+r.value+'</b><span>'+r.unit.plural+'</span></button></div>'+
     today +
     '<div class="card"><figcaption><div class="t">The board</div><div class="s">'+
       'Columns are days 1–16 on the top row of each month, 17–31 on the row below — same as the whiteboard. '+
@@ -992,6 +1045,7 @@ function renderBoard(){
       'This app follows Part 1, the sticker table, since that is the sheet you buy, and adds ORANGE for CARDIO '+
       'from BUILD onward. Worth settling before you write the legend on the whiteboard.</p>';
 
+  document.getElementById("outBtn").onclick=openTimeUnit;
   document.getElementById("xtoggle").onclick=()=>{
     state.board[iso] = state.board[iso]||{};
     state.board[iso].x = !state.board[iso].x;
@@ -1185,7 +1239,7 @@ function renderDash(){
 
   const tiles=[
     {k:"Since the break", v:daysBetween(INJURY,iso), s:"days", d:"Femur fractured "+longDate(INJURY)},
-    {k:"To Hawaii", v:daysBetween(iso,GOAL), s:"days", d:longDate(GOAL)+", 2027"},
+    {k:"To Hawaii", v:remaining().value, s:remaining().unit.id, d:longDate(GOAL)+", 2027"},
     {k:"Dots this week", v:dots7, s:"/ "+avail7, d:(avail7?Math.round(dots7/avail7*100)+"% of available dots":"—")+(bonus7?" · +"+bonus7+" bonus":"")},
     {k:"Dot streak", v:dotStreak(), s:"days", d:"consecutive days with at least one dot"},
     {k:"Last acetaminophen", v:lA?clock(lA.mins):"—", s:"", d:"4 h between doses is the usual floor"},
@@ -1344,10 +1398,10 @@ function wireHover(){
 /* ════════ 5 · PLAN ════════ */
 function renderPlan(){
   const iso=todayISO(), cur=phaseOn(iso);
-  const toGoal=daysBetween(iso,GOAL), total=daysBetween(INJURY,GOAL), gone=daysBetween(INJURY,iso);
+  const r=remaining(), total=daysBetween(INJURY,GOAL), gone=daysBetween(INJURY,iso);
   document.getElementById("planBody").innerHTML=
     '<div class="goalcard"><h3>🏄 Surfing with your daughter</h3>'+
-      '<p>Hawaii, '+longDate(GOAL)+' 2027. '+toGoal+' days out — day '+gone+' of '+total+', '+
+      '<p>Hawaii, '+longDate(GOAL)+' 2027. '+r.label+' — day '+gone+' of '+total+', '+
       Math.round(gone/total*100)+'% of the way there. This is not a recovery. It is an eight-month training block.</p></div>'+
     '<div class="card">'+PHASES.map(p=>{
       const done=p.to<iso, now=p.id===cur.id;
@@ -1405,10 +1459,9 @@ function renderPlan(){
 
 /* ════════ CHROME ════════ */
 function renderHeader(){
-  const iso=todayISO(), toGoal=daysBetween(iso,GOAL);
-  const months=Math.round(toGoal/30.44*10)/10;
-  document.getElementById("cdOut").textContent = toGoal>60 ? months : Math.max(0,toGoal);
-  document.getElementById("cdUnit").textContent = toGoal>60 ? "months out" : "days out";
+  const iso=todayISO(), r=remaining();
+  document.getElementById("cdOut").textContent = r.value;
+  document.getElementById("cdUnit").textContent = r.unit.plural;
   const ph=phaseOn(iso);
   document.getElementById("phaseName").textContent = ph.em+" "+ph.name;
   const total=daysBetween(INJURY,GOAL), gone=Math.max(0,Math.min(total,daysBetween(INJURY,iso)));
@@ -1422,6 +1475,7 @@ document.querySelectorAll("nav.tabs button").forEach(b=> b.onclick=()=>{
   b.classList.add("on"); document.getElementById("s-"+b.dataset.tab).classList.add("on");
   window.scrollTo({top:0,behavior:"instant"});
 });
+document.getElementById("cdBtn").onclick=openTimeUnit;
 document.getElementById("themeBtn").onclick=()=>{
   const c=document.documentElement.getAttribute("data-theme");
   const n=c==="light"?"dark":c==="dark"?null:"light";
