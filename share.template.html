@@ -1,0 +1,395 @@
+<title>Recovery Record</title>
+<style>
+/*__SHARED_CSS__*/
+
+/* ── viewer-only additions ── */
+.banner{background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);
+  padding:11px 13px;font-size:12.5px;color:var(--ink-2);line-height:1.45;margin-bottom:16px}
+.banner b{color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:3px}
+.ro{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);border:1px solid var(--line);border-radius:999px;padding:2px 7px}
+table.meds{border-collapse:collapse;width:100%;min-width:520px;font-size:13px}
+table.meds th{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);text-align:left;font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.meds td{padding:9px 10px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+table.meds tr:last-child td{border-bottom:0}
+table.meds td.d{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.meds td.nm b{display:block;font-weight:600}
+table.meds td.nm em{font-style:normal;font-size:11px;color:var(--ink-3)}
+.msv{display:flex;gap:9px;align-items:flex-start;font-size:13px;padding:4px 0;color:var(--ink-2)}
+.msv i{font-style:normal;flex:none;width:16px;text-align:center;font-family:var(--mono);font-size:12px}
+.msv.done{color:var(--ink-3)}
+.msv.done i{color:var(--good)}
+.prog{height:6px;background:var(--surface-3);border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.prog i{display:block;height:100%;background:var(--accent);border-radius:999px}
+
+@media print{
+  header,nav.tabs,.tip,.toast,.banner,.toolbar{display:none!important}
+  body{padding:0;background:#fff;color:#000}
+  .screen{display:block!important;page-break-before:always;padding-top:0}
+  .screen:first-of-type{page-break-before:auto}
+  .card,.stat,.hero{box-shadow:none;border-color:#bbb}
+  .dayhd{position:static}
+  table.log{min-width:0;font-size:11px}
+  .tblbox,.chartbox,.boardscroll{overflow:visible}
+}
+</style>
+
+<header>
+  <div class="wrap hd">
+    <h1><small>Shared record · read-only</small><span id="phaseName">—</span></h1>
+    <button class="countdown" id="cdBtn" title="Change how recovery time is counted">
+      <b id="cdOut">—</b><span id="cdUnit">days out</span></button>
+    <button class="iconbtn" id="themeBtn" title="Switch theme" aria-label="Switch theme">◐</button>
+  </div>
+  <div class="rail"><i id="railFill" style="width:0%"></i></div>
+</header>
+
+<main class="wrap">
+  <section class="screen on" id="s-dash">
+    <p class="eyebrow">Dashboard</p>
+    <h2 class="sec" id="dashDate">Overview</h2>
+    <div id="banner"></div>
+    <div class="stack" id="dashBody"></div>
+  </section>
+
+  <section class="screen" id="s-table">
+    <p class="eyebrow">Ledger</p>
+    <h2 class="sec">Every dose, every day</h2>
+    <p class="sub">Newest day first. Each day totals its own acetaminophen and opioid load.</p>
+    <div class="toolbar"><button class="btn" id="copyCsv">Copy CSV</button>
+      <button class="btn ghost" id="printBtn">Print / save PDF</button></div>
+    <div id="ledger"></div>
+  </section>
+
+  <section class="screen" id="s-plan">
+    <p class="eyebrow">The road</p>
+    <h2 class="sec">Four phases to Hawaii</h2>
+    <p class="sub">Progress against the eight-month training block.</p>
+    <div class="stack" id="planBody"></div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button data-tab="dash" class="on"><span>📊</span>Dashboard</button>
+  <button data-tab="table"><span>📋</span>Ledger</button>
+  <button data-tab="plan"><span>🏄</span>Plan</button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"></div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/*__SHARED_CONST__*/
+
+/* ════════ VIEWER STATE — read-only, no persistence ════════ */
+let SHARE = {mode:"clinical", ts:null};
+let state = {
+  entries: SEED_ENTRIES.map((e,i)=>({uid:"s"+i, ...e})),
+  daily: JSON.parse(JSON.stringify(SEED_DAILY)),
+  done:{}, board:{}, bench:{},
+  settings:{apapTab:500, apapLimit:4000, theme:null, timeUnit:"days"}
+};
+function save(){ /* viewer never writes */ }
+
+/* payload arrives in the URL fragment, so the data never leaves the link */
+const b64d = s => { s=s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="=";
+  const bin=atob(s), u=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u; };
+async function decodePayload(raw){
+  const kind=raw[0], bytes=b64d(raw.slice(1));
+  if(kind==="g"){
+    if(typeof DecompressionStream==="undefined") throw new Error("no gzip");
+    const st=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return JSON.parse(await new Response(st).text());
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+async function hydrate(){
+  const m=/[#&]d=([^&]+)/.exec(location.hash);
+  if(!m) return;
+  try{
+    const p=await decodePayload(decodeURIComponent(m[1]));
+    state.entries=(p.e||[]).map((a,i)=>({uid:"h"+i,date:a[0],time:a[1],id:a[2],q:a[3],note:a[4]||""}));
+    state.daily=p.daily||{}; state.done=p.done||{}; state.board=p.board||{};
+    if(p.settings) Object.assign(state.settings,p.settings);
+    SHARE.mode=p.mode||"clinical"; SHARE.ts=p.ts||null;
+  }catch(e){ SHARE.error=true; }
+}
+
+/*__SHARED_HELPERS__*/
+
+/* minimal sheet, only for the time-unit picker */
+const scrim=document.getElementById("scrim"), sheet=document.getElementById("sheet");
+function closeSheet(){ scrim.classList.remove("on"); sheet.classList.remove("on"); sheet.innerHTML=""; }
+scrim.onclick=closeSheet;
+function showSheet(h){ sheet.innerHTML=h; scrim.classList.add("on"); sheet.classList.add("on"); }
+
+/*__SHARED_CHARTS__*/
+
+function trend(now,prev){
+  if(!prev&&!now) return "none either week";
+  if(!prev) return "up from none last week";
+  const pc=Math.round((now-prev)/prev*100);
+  if(!pc) return "flat on last week";
+  return (pc>0?"up ":"down ")+Math.abs(pc)+"% on last week"+(pc<0?" — good":"");
+}
+function lastN(n){ const o=[],t=todayISO(); for(let i=n-1;i>=0;i--) o.push(addDays(t,-i)); return o; }
+const showNotes = () => SHARE.mode!=="family";
+
+/* ════════ MEDICATION SUMMARY — what a clinician opens this for ════════ */
+function medSummary(days){
+  const win=lastN(days), set=new Set(win);
+  const agg={};
+  state.entries.filter(e=>set.has(e.date)).forEach(e=>{
+    const c=BY_ID[e.id]; if(!c) return;
+    if(!["pain","clot","sleep","supp","canna"].includes(c.g)) return;
+    agg[e.id] ||= {c, total:0, days:new Set(), apap:0};
+    agg[e.id].total+=e.q; agg[e.id].days.add(e.date); agg[e.id].apap+=apapMg(e);
+  });
+  return Object.values(agg).sort((a,b)=>{
+    const ord={pain:0,clot:1,sleep:2,supp:3,canna:4};
+    return (ord[a.c.g]-ord[b.c.g]) || (b.days.size-a.days.size);
+  });
+}
+
+/* ════════ RENDER ════════ */
+function renderBanner(){
+  const empty = !state.entries.length;
+  document.getElementById("banner").innerHTML =
+    '<div class="banner"><b>Read-only shared view</b>'+
+    (empty
+      ? (SHARE.error
+          ? 'The record in this link could not be read — it may have been truncated in transit. Ask Justin to send it again.'
+          : 'No record loaded. This page carries no data of its own — it only displays a snapshot Justin sends you as a link. Ask him for one.')
+      : 'Snapshot taken '+esc(longDate(SHARE.ts||todayISO()))+
+        '. Nothing here can be edited, and anything logged after that date will not appear until he shares an updated link.'+
+        (SHARE.mode==="family" ? ' Personal journal notes are not included in this version.' : ''))+
+    '</div>';
+}
+function renderDash(){
+  const iso=todayISO(), st=dayStats(iso), lim=state.settings.apapLimit;
+  /* today is often empty early in the morning — fall back to the most recent
+     day that actually has medication on it, and say which day is being shown */
+  const shown = (st.apap || st.opioid) ? st
+    : (allDates().map(dayStats).find(d=>d.apap||d.opioid) || st);
+  document.getElementById("dashDate").textContent =
+    "Day "+daysBetween(INJURY,iso)+" after surgery";
+  const lvl=apapLevel(shown.apap), pct=Math.min(100,shown.apap/lim*100);
+  const col=lvl==="crit"?"var(--crit)":lvl==="warn"?"var(--warn)":"var(--good)";
+  const isToday = shown.iso===iso;
+
+  const d14=lastN(14).map(dayStats), d7=d14.slice(-7);
+  const sv=d7.map(x=>x.sleepH).filter(v=>v!=null);
+  const avg7=sv.length?sv.reduce((a,b)=>a+b,0)/sv.length:null;
+  const op7=d7.reduce((a,b)=>a+b.opioid,0);
+  const opPrev=lastN(14).slice(0,7).map(dayStats).reduce((a,b)=>a+b.opioid,0);
+  const cod7=d7.reduce((a,b)=>a+b.codeine,0);
+  const maxApap=Math.max(...d14.map(x=>x.apap));
+  const overDays=d14.filter(x=>x.apap>lim).length, apapDays=d14.filter(x=>x.apap>0).length;
+  const ph=phaseOn(iso), r=remaining();
+
+  const tiles=[
+    {k:"Days post-op", v:daysBetween(INJURY,iso), s:"", d:"Femur fractured "+longDate(INJURY)},
+    {k:"To the goal", v:r.value, s:r.unit.id, d:longDate(GOAL)+", 2027"},
+    {k:"Peak day, 14 days", v:maxApap.toLocaleString(), s:"mg", d:"highest single-day acetaminophen"},
+    {k:"Days over ceiling, 14", v:overDays, s:"/ "+apapDays, d:"days above "+lim.toLocaleString()+" mg"},
+    {k:"Opioid doses, 7 days", v:Math.round(op7*10)/10, s:"", d:trend(op7,opPrev)},
+    {k:"Codeine, 7 days", v:cod7, s:"mg", d:"from Tylenol No. 3"},
+    {k:"Avg sleep, 7 days", v:avg7!=null?avg7.toFixed(1):"—", s:avg7!=null?"h":"", d:avg7!=null&&avg7<7?"below the 7 h target":"at target"},
+    {k:"Adherence, 7 days", v:lastN(7).reduce((a,d)=>a+dayMeta(d).earnedLive.length,0),
+     s:"/ "+lastN(7).filter(d=>d>=INJURY&&d<=iso).reduce((a,d)=>a+dayMeta(d).live.length,0), d:"habit dots earned"}
+  ];
+
+  const meds=medSummary(7);
+  const medRows = meds.length ? meds.map(m=>
+    '<tr><td class="nm"><b>'+m.c.em+' '+esc(m.c.name)+'</b>'+
+      (m.c.common&&m.c.common!=="—"?'<em>'+esc(m.c.common)+(m.c.dose&&m.c.dose!=="—"?' · '+esc(m.c.dose):'')+'</em>':'')+'</td>'+
+    '<td class="d">'+(Math.round(m.total*100)/100)+' '+esc(m.c.unit||'')+'</td>'+
+    '<td class="d">'+m.days.size+' / 7</td>'+
+    '<td>'+esc(m.c.fx)+(m.apap?'<br><span class="mono" style="font-size:10px;color:var(--ink-3)">'+
+      m.apap.toLocaleString()+' mg APAP</span>':'')+'</td></tr>').join("")
+    : '<tr><td colspan="4" class="muted">Nothing logged in the last 7 days.</td></tr>';
+
+  document.getElementById("dashBody").innerHTML=
+    '<div class="hero"><span class="lbl">Acetaminophen · all sources · '+
+      (isToday?"today":esc(longDate(shown.iso))+" · last day with doses")+'</span>'+
+      '<div class="big" style="color:'+col+'">'+shown.apap.toLocaleString()+
+        ' <span class="of">/ '+lim.toLocaleString()+' mg</span></div>'+
+      '<div class="meter"><i style="width:'+pct+'%;background:'+col+'"></i>'+
+        '<span class="tick" style="left:75%"></span></div>'+
+      '<p class="note">Counts plain Tylenol at '+state.settings.apapTab+
+      ' mg a tablet plus 300 mg in every Tylenol No. 3.'+
+      (shown.codeine?' Codeine that day: '+shown.codeine+' mg.':'')+'</p></div>'+
+    '<div class="card"><figcaption><div class="t">Active medications, last 7 days</div>'+
+      '<div class="s">Everything logged in the pain, anticoagulant, sleep, supplement and cannabis groups</div></figcaption>'+
+      '<div class="tblbox" style="border:0"><table class="meds"><thead><tr>'+
+      '<th>Drug / compound</th><th>Total</th><th>Days used</th><th>Purpose</th></tr></thead>'+
+      '<tbody>'+medRows+'</tbody></table></div></div>'+
+    '<div class="tiles">'+tiles.map(t=>'<div class="stat"><span class="k">'+esc(t.k)+'</span>'+
+      '<div class="v">'+esc(String(t.v))+(t.s?' <small>'+esc(t.s)+'</small>':'')+'</div>'+
+      '<div class="d">'+esc(t.d)+'</div></div>').join("")+'</div>'+
+    '<div class="card"><figure><figcaption><div class="t">Daily acetaminophen, 14 days</div>'+
+      '<div class="s">Dashed line is the '+lim.toLocaleString()+' mg daily ceiling</div></figcaption>'+
+      '<div class="chartbox">'+apapChart(d14,lim)+'</div>'+
+      '<div class="legend"><span><i style="background:var(--good)"></i>Under 75% of ceiling</span>'+
+      '<span><i style="background:var(--warn)"></i>75–100%</span>'+
+      '<span><i style="background:var(--crit)"></i>Over ceiling</span>'+
+      '<span><i class="ln"></i>Ceiling</span></div></figure></div>'+
+    '<div class="card"><figure><figcaption><div class="t">Sleep, 14 days</div>'+
+      '<div class="s">Measured by Oura ring. Bone healing happens largely in slow-wave sleep.</div></figcaption>'+
+      '<div class="chartbox">'+sleepChart(d14)+'</div></figure></div>'+
+    '<div class="card"><figure><figcaption><div class="t">Habit adherence, 14 days</div>'+
+      '<div class="s">Daily training dots, stacked by category</div></figcaption>'+
+      '<div class="chartbox">'+dotChart(lastN(14))+'</div>'+
+      '<div class="legend">'+DOTS.map(d=>'<span><i style="background:'+dotVar(d.id)+'"></i>'+d.name+'</span>').join("")+
+      '</div></figure></div>'+
+    '<div class="card"><span class="mono" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)">Current phase</span>'+
+      '<h3 style="font-family:var(--serif);font-size:19px;margin:6px 0 3px;font-weight:600">'+ph.em+' '+esc(ph.name)+'</h3>'+
+      '<p style="margin:0 0 10px;font-size:13px;color:var(--ink-2)">'+esc(ph.job)+'</p>'+
+      '<p class="mono" style="margin:0;font-size:11px;color:var(--ink-3)">'+esc(shortDate(ph.from))+' → '+esc(shortDate(ph.to))+'</p></div>'+
+    '<p class="disclaimer">A personal log kept by Justin, not a clinical record. Doses are self-reported and '+
+    'may be incomplete. 4,000 mg a day is the common adult acetaminophen maximum; clinicians often set '+
+    '3,000 mg or lower with alcohol, liver concerns, or long courses.</p>';
+  wireHover();
+}
+function renderLedger(){
+  const host=document.getElementById("ledger"), dates=allDates();
+  if(!dates.length){ host.innerHTML='<div class="card"><p class="muted" style="margin:0">Nothing logged.</p></div>'; return; }
+  const notes=showNotes();
+  host.innerHTML=dates.map(iso=>{
+    const st=dayStats(iso), meta=dayMeta(iso);
+    const rows=st.rows.slice().sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0);
+    const lvl=apapLevel(st.apap);
+    const dotsHtml=meta.earned.length?'<span class="dots">'+meta.earned.map(id=>
+      '<i style="background:'+dotVar(id)+'" title="'+DOT_BY[id].name+'"></i>').join("")+'</span>':"";
+    const pills=[
+      meta.star?'<span class="pill" style="background:var(--sand-soft);color:var(--sand);border-color:var(--sand)">★ perfect</span>':'',
+      st.apap?'<span class="pill '+lvl+'">APAP '+st.apap.toLocaleString()+' mg</span>':'',
+      st.opioid?'<span class="pill neutral">Opioid × '+(Math.round(st.opioid*10)/10)+'</span>':'',
+      st.sleepH!=null?'<span class="pill '+(st.sleepH<7?"warn":"good")+'">Sleep '+st.sleepH+' h</span>':''
+    ].join(" ");
+    let lastTod="";
+    const body=rows.map(e=>{
+      const c=BY_ID[e.id]||{em:"•",name:e.id,fx:"",unit:""};
+      const tod=timeOfDay(e.time), tag=tod!==lastTod?'<span class="tod">'+tod+'</span>':''; lastTod=tod;
+      const mg=apapMg(e);
+      return '<tr><td class="t">'+h12(e.time)+tag+'</td>'+
+        '<td class="q">'+(c.unit===""?"—":fmtQty(e.q,c.unit))+'</td>'+
+        '<td class="n">'+c.em+' '+esc(c.name)+
+          (c.common&&c.common!=="—"?'<em>'+esc(c.common)+(c.dose&&c.dose!=="—"?' · '+esc(c.dose):'')+'</em>':'')+'</td>'+
+        '<td class="e"><span class="pill neutral">'+esc(c.fx||"—")+'</span>'+
+          (mg?'<br><span class="mono" style="font-size:10px;color:var(--ink-3)">'+mg.toLocaleString()+' mg APAP</span>':'')+'</td>'+
+        (notes?'<td class="no">'+(e.note?esc(e.note):'<span class="muted">—</span>')+'</td>':'')+'</tr>';
+    }).join("");
+    const dnote=(notes&&st.daily.note)?'<tr><td class="t muted">—</td><td class="q">—</td>'+
+      '<td class="n">🌙 Sleep report<em>Oura</em></td><td class="e"><span class="pill neutral">Metrics</span></td>'+
+      '<td class="no">'+esc(st.daily.note)+'</td></tr>':'';
+    return '<div class="day"><div class="dayhd"><h3>'+esc(longDate(iso))+'</h3>'+
+      '<span class="dow">'+esc(dow(iso))+' · day '+daysBetween(INJURY,iso)+'</span>'+dotsHtml+
+      '<span class="sp"></span>'+pills+'</div>'+
+      '<div class="tblbox"><table class="log"><thead><tr><th>Time</th><th>Qty</th>'+
+      '<th>Drug / compound / activity</th><th>Desired effect</th>'+(notes?'<th>Notes</th>':'')+
+      '</tr></thead><tbody>'+body+dnote+'</tbody></table></div></div>';
+  }).join("");
+}
+function buildCSV(){
+  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const notes=showNotes();
+  const head=["Date","Day of week","Day since injury","Phase","Time","Time of day","Quantity","Unit",
+    "Drug / compound / activity","Common name","Strength","Class","Desired effect",
+    "Acetaminophen (mg)","Opioid dose"]; if(notes) head.push("Notes");
+  const lines=[head.map(q).join(",")];
+  state.entries.slice().sort((a,b)=>(b.date+b.time)<(a.date+a.time)?-1:(b.date+b.time)>(a.date+a.time)?1:0)
+    .forEach(e=>{
+      const c=BY_ID[e.id]||{}, g=GROUPS.find(x=>x.id===c.g);
+      const row=[e.date,dow(e.date),daysBetween(INJURY,e.date),phaseOn(e.date).name,e.time,timeOfDay(e.time),
+        e.q,c.unit||"",c.name||e.id,(c.common&&c.common!=="—")?c.common:"",(c.dose&&c.dose!=="—")?c.dose:"",
+        g?g.label:"",c.fx||"",apapMg(e)||"",c.opioid?e.q:""];
+      if(notes) row.push(e.note||"");
+      lines.push(row.map(q).join(","));
+    });
+  lines.push("");
+  const h2=["Date","Day of week","Phase","Sleep (h)","Pain 0-10","Total acetaminophen (mg)","Opioid doses","Dots earned"];
+  if(notes) h2.push("Note");
+  lines.push(h2.map(q).join(","));
+  allDates().forEach(iso=>{
+    const st=dayStats(iso), m=dayMeta(iso), d=st.daily;
+    const row=[iso,dow(iso),phaseOn(iso).name,d.sleepH??"",d.pain??"",st.apap,
+      Math.round(st.opioid*10)/10,m.earnedLive.length+" / "+m.live.length];
+    if(notes) row.push(d.note||"");
+    lines.push(row.map(q).join(","));
+  });
+  return lines.join("\r\n");
+}
+function renderPlan(){
+  const iso=todayISO(), cur=phaseOn(iso), r=remaining();
+  const total=daysBetween(INJURY,GOAL), gone=daysBetween(INJURY,iso);
+  document.getElementById("planBody").innerHTML=
+    '<div class="goalcard"><h3>🏄 Surfing with his daughter</h3>'+
+      '<p>Hawaii, '+longDate(GOAL)+' 2027. '+r.label+' — day '+gone+' of '+total+', '+
+      Math.round(gone/total*100)+'% of the way there.</p>'+
+      '<div class="prog"><i style="width:'+Math.round(gone/total*100)+'%"></i></div></div>'+
+    '<div class="card">'+PHASES.map(p=>{
+      const done=p.to<iso, now=p.id===cur.id;
+      const cls=p.goal?"goal":now?"now":done?"done":"";
+      const t=p.ms.filter(m=>state.done[p.id+"|"+m]).length;
+      return '<div class="phase '+cls+'"><h4>'+p.em+' '+esc(p.name)+
+        (now?' <span class="pill accent">current</span>':'')+
+        ' <span class="pill neutral">'+t+'/'+p.ms.length+'</span></h4>'+
+        '<div class="when">'+esc(shortDate(p.from))+' – '+esc(shortDate(p.to))+'</div>'+
+        '<p class="job">'+esc(p.job)+'</p>'+
+        (p.detail?'<p>'+esc(p.detail)+'</p>':'')+
+        (p.why?'<p style="border-left:2px solid var(--sand);padding-left:11px;color:var(--ink-2)">'+esc(p.why)+'</p>':'')+
+        p.ms.map(m=>{ const on=!!state.done[p.id+"|"+m];
+          return '<div class="msv'+(on?" done":"")+'"><i>'+(on?"✓":"○")+'</i><span>'+esc(m)+'</span></div>'; }).join("")+
+        '</div>';
+    }).join("")+'</div>'+
+    '<p class="disclaimer">These are calendar phases, not clinical clearance. Loading progression is the '+
+    'surgeon’s call based on imaging. The whiteboard never overrides the x-ray.</p>';
+}
+function renderHeader(){
+  const iso=todayISO(), r=remaining();
+  document.getElementById("cdOut").textContent=r.value;
+  document.getElementById("cdUnit").textContent=r.unit.plural;
+  const ph=phaseOn(iso);
+  document.getElementById("phaseName").textContent=ph.em+" "+ph.name;
+  const total=daysBetween(INJURY,GOAL), gone=Math.max(0,Math.min(total,daysBetween(INJURY,iso)));
+  document.getElementById("railFill").style.width=(gone/total*100)+"%";
+}
+function renderAll(){ renderHeader(); renderBanner(); renderDash(); renderLedger(); renderPlan(); }
+
+document.querySelectorAll("nav.tabs button").forEach(b=> b.onclick=()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".screen").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); document.getElementById("s-"+b.dataset.tab).classList.add("on");
+  window.scrollTo({top:0,behavior:"instant"});
+});
+document.getElementById("cdBtn").onclick=openTimeUnit;
+document.getElementById("printBtn").onclick=()=>window.print();
+document.getElementById("themeBtn").onclick=()=>{
+  const c=document.documentElement.getAttribute("data-theme");
+  const n=c==="light"?"dark":c==="dark"?null:"light";
+  if(n) document.documentElement.setAttribute("data-theme",n);
+  else document.documentElement.removeAttribute("data-theme");
+  toast(n?n[0].toUpperCase()+n.slice(1)+" theme":"Following your system theme");
+};
+document.getElementById("copyCsv").onclick=async()=>{
+  const csv=buildCSV();
+  try{ await navigator.clipboard.writeText(csv); toast("CSV copied — paste into Sheets or Excel"); }
+  catch(e){
+    showSheet('<h3>CSV</h3><p class="sh-sub">Select all and copy</p>'+
+      '<textarea class="csvout" readonly>'+esc(csv)+'</textarea>'+
+      '<div class="btnrow"><button class="btn" id="cancel">Done</button></div>');
+    document.getElementById("cancel").onclick=closeSheet;
+    sheet.querySelector("textarea").select();
+  }
+};
+
+hydrate().then(renderAll);
+</script>
