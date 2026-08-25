@@ -111,6 +111,7 @@ h2.sec{font-family:var(--serif);font-size:20px;font-weight:600;margin:0 0 4px;le
 .tile .em{font-size:21px;line-height:1}
 .tile .nm{font-size:11.5px;font-weight:600;line-height:1.25}
 .tile .cm{font-size:10px;color:var(--ink-3);line-height:1.3;margin-top:-2px}
+.tile .dose{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.01em;line-height:1.2}
 .tile .ds{margin-top:auto;font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
 .tile .strip{position:absolute;left:0;top:11px;bottom:11px;width:2px;border-radius:2px}
 .tile .earns{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%}
@@ -372,6 +373,8 @@ nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
   border-radius:999px;font-size:13px;box-shadow:var(--shadow);opacity:0;transition:opacity .18s;
   pointer-events:none;max-width:88vw;text-align:center}
 .toast.on{opacity:1}
+#loadwarn{padding-top:14px}
+#loadwarn .alert{margin-top:0}
 .disclaimer{font-size:11.5px;color:var(--ink-3);border-top:1px solid var(--line-soft);
   padding-top:12px;margin-top:22px;max-width:64ch;line-height:1.5}
 .csvout{font-family:var(--mono);font-size:11px;white-space:pre;min-height:180px}
@@ -390,6 +393,8 @@ nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
   </div>
   <div class="rail"><i id="railFill" style="width:0%"></i></div>
 </header>
+
+<div class="wrap" id="loadwarn" hidden></div>
 
 <main class="wrap">
 
@@ -544,7 +549,7 @@ const GROUPS = [
   {id:"clot",  label:"Clot & inflammation",    color:"var(--sand)"},
   {id:"sleep", label:"Sleep",                  color:"var(--accent)"},
   {id:"supp",  label:"Vitamins & supplements", color:"var(--good)"},
-  {id:"canna", label:"Cannabis & other",       color:"var(--warn)"},
+  {id:"canna", label:"Other substances",       color:"var(--warn)"},
   {id:"rehab", label:"Rehab & training",       color:"var(--accent)"},
   {id:"body",  label:"Body & care",            color:"var(--ink-3)"}
 ];
@@ -559,7 +564,8 @@ const CATALOG = [
   {id:"asa",    em:"🩸",   name:"Acetylsalicylic acid",    common:"ASA · “blood thinner”", dose:"81–325 mg", unit:"tab", q:1, g:"clot", fx:"Blood thinner"},
   {id:"lmwh",   em:"💉",   name:"Enoxaparin",              common:"Lovenox injection", dose:"per Rx", unit:"inj", q:1, g:"clot", fx:"Blood thinner"},
 
-  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"25 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health"},
+  {id:"quet100",em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"100 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health"},
+  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"25 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health", retired:true},
   {id:"gravol", em:"😵‍💫",  name:"Dimenhydrinate",          common:"Gravol", dose:"50 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep aid / nausea"},
   {id:"sleepez",em:"💤",   name:"Dimenhydrinate gel",      common:"Sleep-EZ", dose:"25 mg", unit:"gel", q:1, g:"sleep", fx:"Sleep aid"},
   {id:"melat",  em:"🌛",   name:"Melatonin",               common:"gummy", dose:"5 mg", unit:"gummy", q:1, g:"sleep", fx:"Sleep onset"},
@@ -576,10 +582,10 @@ const CATALOG = [
   {id:"protein",em:"🥤",   name:"Protein + collagen",      common:"shake", dose:"—", unit:"shake", q:1, g:"supp", fx:"Bone & tissue repair", dot:"yellow"},
   {id:"protgoal",em:"🍗",  name:"Protein target hit",      common:"~1.6 g/kg for the day", dose:"—", unit:"", q:1, g:"supp", fx:"Fuel", dot:"yellow"},
 
-  {id:"thc",    em:"🍬",   name:"THC edible",              common:"gummy", dose:"5 mg", unit:"piece", q:1, g:"canna", fx:"Pain / sleep"},
-  {id:"cbn",    em:"🫐",   name:"CBN gummy",               common:"—", dose:"10 mg", unit:"piece", q:1, g:"canna", fx:"Sleep"},
-  {id:"flower", em:"🌿",   name:"Cannabis flower",         common:"indica", dose:"0.35 g", unit:"g", q:0.35, g:"canna", fx:"Pain / relaxation"},
-  {id:"preroll",em:"🚬",   name:"Pre-roll",                common:"sativa", dose:"—", unit:"roll", q:1, g:"canna", fx:"Pain / mood"},
+  {id:"thc",    em:"🍬",   name:"THC edible",              common:"gummy", dose:"5 mg", unit:"piece", q:1, g:"canna", fx:"Pain / sleep", retired:true},
+  {id:"cbn",    em:"🫐",   name:"CBN gummy",               common:"—", dose:"10 mg", unit:"piece", q:1, g:"canna", fx:"Sleep", retired:true},
+  {id:"flower", em:"🌿",   name:"Cannabis flower",         common:"indica", dose:"0.35 g", unit:"g", q:0.35, g:"canna", fx:"Pain / relaxation", retired:true},
+  {id:"preroll",em:"🚬",   name:"Pre-roll",                common:"sativa", dose:"—", unit:"roll", q:1, g:"canna", fx:"Pain / mood", retired:true},
   {id:"caff",   em:"⚡",   name:"Caffeine",                common:"coffee / energy drink", dose:"—", unit:"serving", q:1, g:"canna", fx:"Stimulant"},
   {id:"alcohol",em:"🍺",   name:"Alcohol",                 common:"breaks the FUEL dot", dose:"—", unit:"drink", q:1, g:"canna", fx:"Depressant", blocks:"yellow"},
 
@@ -604,6 +610,7 @@ const CATALOG = [
   {id:"checkin",em:"📈",   name:"Daily check-in",          common:"sleep · pain · mood", dose:"—", unit:"", q:1, g:"body", fx:"Metrics", checkin:true},
   {id:"breath", em:"🧘‍♂️", name:"Breathwork / meditation", common:"—", dose:"—", unit:"min", q:10, g:"body", fx:"Nervous system", dot:"purple"},
   {id:"journal",em:"📓",   name:"Journaling",              common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Spiritual", dot:"purple"},
+  {id:"mtherapy",em:"🗣️",  name:"Mental therapy",          common:"counselling · psychiatry", dose:"—", unit:"", q:1, g:"body", fx:"Mental health", dot:"purple"},
   {id:"wound",  em:"🩹",   name:"Wound & staple care",     common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Wound care"},
   {id:"appt",   em:"🏥",   name:"Medical appointment",     common:"PT · Dr. Laughren · x-ray", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
   {id:"xray",   em:"🩻",   name:"X-ray / imaging",         common:"union check", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
@@ -617,7 +624,7 @@ const BY_ID = Object.fromEntries(CATALOG.map(c=>[c.id,c]));
 const STACKS = [
   {id:"morn", em:"🌅", label:"Morning stack", items:[["apap",2],["asa",1],["celeco",1],["vitstack",1]]},
   {id:"aft",  em:"🌤", label:"Afternoon",     items:[["apap",2],["asa",1],["vitstack",1]]},
-  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet",1],["mag",2],["melat",1]]},
+  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",1],["mag",2],["melat",1]]},
   {id:"fall", em:"⏱️", label:"Two-minute fallback", items:[["ankle",1],["bands",1],["breath",3]]},
   {id:"brk",  em:"⚡", label:"Breakthrough",  items:[["apap",2]]}
 ];
@@ -701,10 +708,20 @@ const SEED_DAILY = {
 };
 
 /* ════════ STATE ════════ */
+let LOAD_ERROR = null;   /* raw bytes we could not parse, if any */
 let state = load();
 function load(){
-  try{ const raw = localStorage.getItem(KEY); if(raw) return migrate(JSON.parse(raw)); }catch(e){}
-  return seedState();
+  let raw = null;
+  try{ raw = localStorage.getItem(KEY); }catch(e){ return seedState(); }
+  if(raw == null) return seedState();      /* genuinely new device */
+  try{ return migrate(JSON.parse(raw)); }
+  catch(e){
+    /* Saved data exists but will not parse. Do NOT fall through to the seed:
+       that would show the sample log, and the next save() would overwrite a
+       real record with it. Hold the raw bytes, refuse to write, and say so. */
+    LOAD_ERROR = raw;
+    return migrate({});
+  }
 }
 function migrate(o){
   o.entries ||= []; o.daily ||= {}; o.done ||= {}; o.board ||= {}; o.bench ||= {};
@@ -720,7 +737,10 @@ function seedState(){
     settings:{apapTab:500, apapLimit:4000, theme:null, timeUnit:"days"}
   };
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function save(){
+  if(LOAD_ERROR) return;   /* never overwrite data we failed to read */
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+}
 
 /* ════════ HELPERS ════════ */
 const pad2 = n => String(n).padStart(2,"0");
@@ -898,7 +918,9 @@ function renderCatalog(){
 
   const host=document.getElementById("catalogGroups");
   host.innerHTML = GROUPS.map(g=>{
-    const items = CATALOG.filter(c=>c.g===g.id); if(!items.length) return "";
+    /* `retired` hides an item from the capture grid but keeps it in the catalog,
+       so previously logged entries still render their real name and dose. */
+    const items = CATALOG.filter(c=>c.g===g.id && !c.retired); if(!items.length) return "";
     return '<p class="eyebrow">'+esc(g.label)+'</p><div class="grid">'+items.map(c=>
       '<button class="tile" data-id="'+c.id+'">'+
         '<i class="strip" style="background:'+g.color+'"></i>'+
@@ -906,6 +928,7 @@ function renderCatalog(){
         (c.blocks?'<i class="earns" style="background:transparent;border:1.5px solid '+dotVar(c.blocks)+'" title="Breaks the '+DOT_BY[c.blocks].name+' dot"></i>':'')+
         '<span class="em">'+c.em+'</span><span class="nm">'+esc(c.name)+'</span>'+
         (c.common&&c.common!=="—"?'<span class="cm">'+esc(c.common)+'</span>':'')+
+        (c.dose&&c.dose!=="—"?'<span class="dose">'+esc(c.dose)+'</span>':'')+
         '<span class="ds">'+esc(c.fx)+'</span></button>').join("")+'</div>';
   }).join("");
   host.querySelectorAll("[data-id]").forEach(b=> b.onclick=()=>openEntry(BY_ID[b.dataset.id]));
@@ -1610,4 +1633,25 @@ document.getElementById("restoreBtn").onclick=()=>{
 if(state.settings && state.settings.theme) document.documentElement.setAttribute("data-theme",state.settings.theme);
 renderCatalog();
 renderAll();
+
+if(LOAD_ERROR){
+  const w=document.getElementById("loadwarn");
+  w.hidden=false;
+  w.innerHTML='<div class="alert" style="border-color:var(--crit);background:var(--crit-bg);color:var(--crit)">'+
+    '<b>Your saved record could not be read</b>'+
+    'Nothing has been overwritten \u2014 saving is switched off until this is sorted. '+
+    'Copy the raw data below and send it to me rather than logging anything new.'+
+    '<div class="btnrow"><button class="btn" id="copyRaw">Copy raw data ('+
+    Math.ceil(LOAD_ERROR.length/1024)+' KB)</button></div></div>';
+  document.getElementById("copyRaw").onclick=async()=>{
+    try{ await navigator.clipboard.writeText(LOAD_ERROR); toast("Raw data copied"); }
+    catch(e){
+      showSheet('<h3>Raw saved data</h3><p class="sh-sub">Select all and copy</p>'+
+        '<textarea class="csvout" readonly>'+esc(LOAD_ERROR)+'</textarea>'+
+        '<div class="btnrow"><button class="btn" id="cancel">Done</button></div>');
+      document.getElementById("cancel").onclick=closeSheet;
+      sheet.querySelector("textarea").select();
+    }
+  };
+}
 </script>
