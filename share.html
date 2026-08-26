@@ -561,7 +561,7 @@ const CATALOG = [
   {id:"apap",   em:"💊",   name:"Acetaminophen",           common:"Tylenol Extra Strength", dose:"500 mg", unit:"tab", q:2, g:"pain", fx:"Pain relief", mgApap:500},
   {id:"t3",     em:"💊✳️", name:"Acetaminophen + codeine", common:"Tylenol No. 3", dose:"300 / 30 mg", unit:"tab", q:1, g:"pain", fx:"Pain relief (opioid)", mgApap:300, mgCodeine:30, opioid:true},
   {id:"hydro",  em:"🛑",   name:"Hydromorphone",           common:"Dilaudid", dose:"per Rx", unit:"dose", q:1, g:"pain", fx:"Severe pain (opioid)", opioid:true},
-  {id:"celeco", em:"🔥",   name:"Celecoxib",               common:"Celebrex · logged “CE”", dose:"per Rx", unit:"cap", q:1, g:"pain", fx:"Anti-inflammatory"},
+  {id:"celeco", em:"🔥",   name:"Celecoxib",               common:"Celebrex · logged “CE”", dose:"per Rx", unit:"cap", q:1, g:"pain", fx:"Anti-inflammatory", retired:true},
   {id:"ibu",    em:"🧯",   name:"Ibuprofen",               common:"Advil", dose:"200 mg", unit:"tab", q:2, g:"pain", fx:"Anti-inflammatory"},
   {id:"naprox", em:"❄️",   name:"Naproxen sodium",         common:"Aleve", dose:"220 mg", unit:"tab", q:1, g:"pain", fx:"Anti-inflammatory"},
 
@@ -628,7 +628,7 @@ const CATALOG = [
 const BY_ID = Object.fromEntries(CATALOG.map(c=>[c.id,c]));
 
 const STACKS = [
-  {id:"morn", em:"🌅", label:"Morning stack", items:[["apap",2],["asa",1],["celeco",1],["lamo",1],["vitstack",1]]},
+  {id:"morn", em:"🌅", label:"Morning stack", items:[["apap",2],["asa",1],["lamo",1],["vitstack",1]]},
   {id:"aft",  em:"🌤", label:"Afternoon",     items:[["apap",2],["asa",1],["vitstack",1]]},
   {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",1],["lamo",1],["mag",2],["melat",1]]},
   {id:"fall", em:"⏱️", label:"Two-minute fallback", items:[["ankle",1],["bands",1],["breath",3]]},
