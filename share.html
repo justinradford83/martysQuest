@@ -550,6 +550,7 @@ const GROUPS = [
   {id:"pain",  label:"Pain control",           color:"var(--crit)"},
   {id:"clot",  label:"Clot & inflammation",    color:"var(--sand)"},
   {id:"sleep", label:"Sleep",                  color:"var(--accent)"},
+  {id:"mind",  label:"Mental health",          color:"var(--d-purple)"},
   {id:"supp",  label:"Vitamins & supplements", color:"var(--good)"},
   {id:"canna", label:"Other substances",       color:"var(--warn)"},
   {id:"rehab", label:"Rehab & training",       color:"var(--accent)"},
@@ -562,6 +563,7 @@ const CATALOG = [
   {id:"hydro",  em:"🛑",   name:"Hydromorphone",           common:"Dilaudid", dose:"per Rx", unit:"dose", q:1, g:"pain", fx:"Severe pain (opioid)", opioid:true},
   {id:"celeco", em:"🔥",   name:"Celecoxib",               common:"Celebrex · logged “CE”", dose:"per Rx", unit:"cap", q:1, g:"pain", fx:"Anti-inflammatory"},
   {id:"ibu",    em:"🧯",   name:"Ibuprofen",               common:"Advil", dose:"200 mg", unit:"tab", q:2, g:"pain", fx:"Anti-inflammatory"},
+  {id:"naprox", em:"❄️",   name:"Naproxen sodium",         common:"Aleve", dose:"220 mg", unit:"tab", q:1, g:"pain", fx:"Anti-inflammatory"},
 
   {id:"asa",    em:"🩸",   name:"Acetylsalicylic acid",    common:"ASA · “blood thinner”", dose:"81–325 mg", unit:"tab", q:1, g:"clot", fx:"Blood thinner"},
   {id:"lmwh",   em:"💉",   name:"Enoxaparin",              common:"Lovenox injection", dose:"per Rx", unit:"inj", q:1, g:"clot", fx:"Blood thinner"},
@@ -573,6 +575,8 @@ const CATALOG = [
   {id:"melat",  em:"🌛",   name:"Melatonin",               common:"gummy", dose:"5 mg", unit:"gummy", q:1, g:"sleep", fx:"Sleep onset"},
   {id:"mag",    em:"🧲",   name:"Magnesium",               common:"bisglycinate", dose:"—", unit:"cap", q:2, g:"sleep", fx:"Sleep / muscle relax"},
   {id:"winddown",em:"🕯️", name:"Wind-down routine",       common:"phone out, lights down", dose:"—", unit:"", q:1, g:"sleep", fx:"Sleep hygiene", dot:"blue"},
+
+  {id:"lamo",   em:"⚖️",   name:"Lamotrigine",             common:"Lamictal · 1 tab twice daily", dose:"25 mg", unit:"tab", q:1, g:"mind", fx:"Mood stabiliser"},
 
   {id:"vitstack",em:"🧺",  name:"Full vitamin stack",      common:"D + Ω-3 + 5-HTP + C", dose:"—", unit:"stack", q:1, g:"supp", fx:"Vitamin", dot:"yellow"},
   {id:"vitd",   em:"☀️",   name:"Cholecalciferol",         common:"Vitamin D3", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · bone", dot:"yellow"},
@@ -624,9 +628,9 @@ const CATALOG = [
 const BY_ID = Object.fromEntries(CATALOG.map(c=>[c.id,c]));
 
 const STACKS = [
-  {id:"morn", em:"🌅", label:"Morning stack", items:[["apap",2],["asa",1],["celeco",1],["vitstack",1]]},
+  {id:"morn", em:"🌅", label:"Morning stack", items:[["apap",2],["asa",1],["celeco",1],["lamo",1],["vitstack",1]]},
   {id:"aft",  em:"🌤", label:"Afternoon",     items:[["apap",2],["asa",1],["vitstack",1]]},
-  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",1],["mag",2],["melat",1]]},
+  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",1],["lamo",1],["mag",2],["melat",1]]},
   {id:"fall", em:"⏱️", label:"Two-minute fallback", items:[["ankle",1],["bands",1],["breath",3]]},
   {id:"brk",  em:"⚡", label:"Breakthrough",  items:[["apap",2]]}
 ];
