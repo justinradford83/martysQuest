@@ -10,11 +10,34 @@ export OURA_CLIENT_ID=...        # never put these in config.yaml
 export OURA_CLIENT_SECRET=...
 export OURA_REFRESH_TOKEN=...
 
-python -m sleepdebt.oura --dump          # 1. confirm the response shape
+python -m sleepdebt.preflight            # what is still blocking go-live
+python -m sleepdebt.oura --verify        # 1. confirm the field mapping
+#    edit config.yaml: real episode dates + confirmed: true
 python -m sleepdebt.calibrate            # 2. fit the threshold — do not skip
-python -m sleepdebt.run --dry-run        # 3. decide, send nothing
-python -m sleepdebt.run                  # 4. live
+#    edit config.yaml: threshold_hours, _calibrated: true, real numbers, twilio
+python -m sleepdebt.preflight            # 3. must print READY
+python -m sleepdebt.run --dry-run        # 4. decide, send nothing
+python -m sleepdebt.run                  # 5. live
 ```
+
+## Go-live gates
+
+`python -m sleepdebt.run` **refuses to send** while any of these is unresolved,
+and exits 2:
+
+- threshold not marked `_calibrated: true`
+- any calibration episode without a date, or without `confirmed: true`
+- any recipient still on a placeholder number
+
+`--dry-run` always works, and the dead-man's switch is unaffected — it does not
+depend on the threshold, so a half-configured system still tells you when data
+stops arriving. `--force` overrides, and says so loudly; it exists for testing,
+not for going live.
+
+`calibrate` withholds its recommendation entirely if any episode is
+unconfirmed. Fitting to a guessed date produces a fitted-*looking* wrong
+answer, which is more dangerous than an obviously missing one — the curve and
+CSVs still come out, only the fit is blocked.
 
 ## The computation
 
@@ -87,9 +110,17 @@ must persist between runs.
 0 10,15,20 * * *  cd /path/to/sleepdebt && /usr/bin/python3 -m sleepdebt.run >> run.log 2>&1
 ```
 
-## Unverified
+## Field mapping
 
-The Oura field names in `oura.py` are the documented ones but have **not** been
-checked against a live response from this account — Oura's docs were unreachable
-from the machine this was written on. `parse_session` fails loudly and names the
-keys it actually received rather than guessing. Run `--dump` first.
+The names in `oura.py` are the documented ones — `total_sleep_duration`
+(seconds), `day`, `bedtime_start`, `bedtime_end`, `type`, `average_heart_rate` —
+but they have **not** been checked against a live response from this account.
+
+`python -m sleepdebt.oura --verify` closes that gap: it fetches real records,
+runs them through the parser, and reports whether the mapping held. It flags
+implausible durations (which would mean the units are not seconds), implausible
+heart rates (wrong field), and any session type not in `count_session_types`
+that would otherwise be silently dropped. `--dump` prints the raw JSON.
+
+Known `type` values: `long_sleep`, `sleep`, `late_nap`, `rest`. Type matching is
+case-insensitive and by substring, so `nap` in config also admits `late_nap`.

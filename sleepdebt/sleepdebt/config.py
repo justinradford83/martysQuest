@@ -92,6 +92,44 @@ class Config:
                 f"from the environment, never from config.yaml.")
         return v
 
+    @property
+    def calibrated(self) -> bool:
+        return self.raw.get("_calibrated") is True
+
+    def episodes(self) -> List[Dict[str, Any]]:
+        return list(self.raw.get("calibration", {}).get("episodes") or [])
+
+    def blockers(self) -> List[str]:
+        """Conditions that must be cleared before live alerting.
+
+        Returned as a list rather than raised so preflight can show all of them
+        at once instead of one per run.
+        """
+        out: List[str] = []
+        if not self.calibrated:
+            out.append("threshold is uncalibrated — run `python -m sleepdebt.calibrate`, "
+                       "set alerting.threshold_hours from its recommendation, then add "
+                       "`_calibrated: true` to config.yaml")
+        eps = self.episodes()
+        if not eps:
+            out.append("calibration.episodes is empty — nothing to fit a threshold against")
+        for e in eps:
+            label = e.get("label", "?")
+            if not e.get("date"):
+                out.append(f"episode {label!r} has no date — the lead-in report covers the "
+                           f"21 days before it, so a month is not precise enough")
+            elif e.get("confirmed") is not True:
+                out.append(f"episode {label!r} ({e['date']}) is not confirmed — set "
+                           f"`confirmed: true` once you have checked the date")
+        for tier, people in (("tier1", self.tier1), ("tier2", self.tier2)):
+            for r in people:
+                if "XXXX" in str(r.get("sms", "")):
+                    out.append(f"{tier} recipient {r.get('name')!r} has a placeholder number")
+        if str(self.raw.get("notifier", {}).get("backend", "")).lower() == "twilio":
+            if "XXXX" in str(self.raw["notifier"]["twilio"].get("from_number", "")):
+                out.append("notifier.twilio.from_number is a placeholder")
+        return out
+
     def validate(self) -> List[str]:
         warn: List[str] = []
         for p in ("debt.baseline_need_hours", "debt.window_days", "alerting.threshold_hours",

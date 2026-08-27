@@ -27,11 +27,30 @@ def main(argv=None) -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dry-run", action="store_true", help="decide but send nothing")
     ap.add_argument("--as-of", type=date.fromisoformat, default=None)
+    ap.add_argument("--force", action="store_true",
+                    help="send despite unresolved go-live blockers (not advised)")
     a = ap.parse_args(argv)
 
     cfg = config.load()
     for w in cfg.validate():
         print(f"warning: {w}", file=sys.stderr)
+
+    # Hard gate. A generic threshold produces false positives, false positives
+    # get the system muted, and a muted system is worse than none — so an
+    # uncalibrated config cannot send. --dry-run still works, and the dead-man's
+    # switch is unaffected: it does not depend on the threshold at all.
+    blockers = cfg.blockers()
+    if blockers and not a.dry_run and not a.force:
+        print("\nREFUSING TO SEND — not ready to go live:", file=sys.stderr)
+        for b in blockers:
+            print(f"  · {b}", file=sys.stderr)
+        print("\nRun `python -m sleepdebt.preflight` for the full checklist, or "
+              "`--dry-run` to see what it would have decided.", file=sys.stderr)
+        return 2
+    if blockers and a.force:
+        print(f"warning: --force set, sending despite {len(blockers)} "
+              f"unresolved blocker(s)", file=sys.stderr)
+
     today = a.as_of or date.today()
     store = Store(cfg.state_path)
     notifier = notify.ConsoleNotifier() if a.dry_run else notify.build(cfg)

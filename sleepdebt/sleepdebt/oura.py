@@ -29,6 +29,9 @@ DAY_KEYS = ("day",)
 START_KEYS = ("bedtime_start",)
 END_KEYS = ("bedtime_end",)
 TYPE_KEYS = ("type",)
+# Values Oura is known to emit for `type`. Matching elsewhere is by substring
+# and case-insensitive, so "nap" in config also covers "late_nap".
+KNOWN_TYPES = ("long_sleep", "sleep", "late_nap", "rest")
 RHR_KEYS = ("average_heart_rate", "lowest_heart_rate")
 
 
@@ -132,22 +135,86 @@ def fetch_sessions(cfg, start: date, end: date) -> List[Dict[str, Any]]:
     return [parse_session(r) for r in OuraClient(cfg).sleep_sessions(start, end)]
 
 
+def verify(cfg, days: int = 7) -> dict:
+    """Fetch real records and report exactly which field mapping held.
+
+    This is the check that closes the one gap I could not close myself: the
+    field names are documented but unconfirmed against this account until a
+    live response has actually been parsed.
+    """
+    end = date.today()
+    raw = OuraClient(cfg).sleep_sessions(end - timedelta(days=days), end)
+    result = {"records": len(raw), "parsed": 0, "problems": [], "types": set(),
+              "sample": None, "unmapped_keys": set()}
+    if not raw:
+        result["problems"].append(
+            f"no sleep records in the last {days} days — wear the ring, sync the "
+            f"app, then re-run")
+        return result
+    mapped = set(DURATION_KEYS + DAY_KEYS + START_KEYS + END_KEYS + TYPE_KEYS + RHR_KEYS)
+    for rec in raw:
+        result["unmapped_keys"] |= (set(rec.keys()) - mapped)
+        try:
+            p = parse_session(rec)
+        except OuraError as exc:
+            result["problems"].append(str(exc))
+            continue
+        result["parsed"] += 1
+        result["types"].add(p["type"])
+        if result["sample"] is None:
+            result["sample"] = p
+        if not (0 < p["hours"] <= 24):
+            result["problems"].append(
+                f"{p['day']}: {p['hours']} h is not a plausible duration — "
+                f"total_sleep_duration may not be in seconds on this account")
+        if p["rhr"] is not None and not (25 <= float(p["rhr"]) <= 120):
+            result["problems"].append(
+                f"{p['day']}: resting HR {p['rhr']} is out of plausible range — "
+                f"check which of {RHR_KEYS} is the right field")
+    unknown = result["types"] - set(KNOWN_TYPES)
+    if unknown:
+        result["problems"].append(
+            f"unrecognised session type(s) {sorted(unknown)} — add them to "
+            f"debt.count_session_types in config.yaml or they will be dropped")
+    return result
+
+
 def _main() -> int:
     from . import config
     ap = argparse.ArgumentParser(description="Oura connectivity and shape check.")
     ap.add_argument("--dump", action="store_true",
-                    help="print one raw day of sleep records and exit")
-    ap.add_argument("--days", type=int, default=1)
+                    help="print raw records and exit")
+    ap.add_argument("--verify", action="store_true",
+                    help="parse real records and report whether the mapping held")
+    ap.add_argument("--days", type=int, default=7)
     a = ap.parse_args()
     cfg = config.load()
     end = date.today()
     start = end - timedelta(days=a.days)
+
+    if a.verify:
+        r = verify(cfg, a.days)
+        print(f"records fetched : {r['records']}")
+        print(f"parsed cleanly  : {r['parsed']}")
+        print(f"session types   : {sorted(r['types']) or '—'}")
+        if r["sample"]:
+            print(f"sample          : {r['sample']}")
+        if r["unmapped_keys"]:
+            print(f"other keys seen : {sorted(r['unmapped_keys'])[:14]}")
+        if r["problems"]:
+            print("\nPROBLEMS")
+            for p in r["problems"]:
+                print(f"  - {p}")
+            return 1
+        print("\nfield mapping confirmed against live data")
+        return 0
+
     raw = OuraClient(cfg).sleep_sessions(start, end)
     if a.dump:
         print(json.dumps(raw, indent=2)[:20000])
         return 0
-    for r in raw:
-        print(parse_session(r))
+    for rec in raw:
+        print(parse_session(rec))
     print(f"{len(raw)} session(s) over {a.days} day(s)")
     return 0
 

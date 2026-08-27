@@ -33,18 +33,29 @@ debt:
   min_observed_days: 7
 
   # Which Oura session types count toward a night's total.
+  # Oura emits at least: long_sleep, sleep, late_nap, rest.
   # Naps genuinely reduce sleep pressure, so they are included by default.
-  count_session_types: ["long_sleep", "sleep", "nap"]
+  # Matching is case-insensitive; "nap" also matches "late_nap".
+  count_session_types: ["long_sleep", "sleep", "nap", "late_nap"]
 
 calibration:
   # Known episodes, used to fit the threshold rather than guessing one.
   # EXACT DATES REQUIRED — the lead-in analysis reports the 21 days before each,
   # so a month alone is not enough. Replace these before running.
+  # Every episode needs `confirmed: true` before calibration will recommend a
+  # threshold. Fitting to a guessed date produces a fitted-looking wrong answer,
+  # which is worse than an obviously missing one.
   episodes:
     - label: "acute episode"
-      date: "2026-08-15"        # PLACEHOLDER — confirm the actual date
+      # Taken from the ledger: mental health assessment at AAC, then urgent
+      # care, 15 Aug 2026. CONFIRM this is the date you mean, then set true.
+      date: "2026-08-15"
+      confirmed: false
     - label: "hypomanic period"
-      date: "2025-01-15"        # PLACEHOLDER — confirm the actual date
+      # January 2025 — exact date unknown. The lead-in report covers the 21
+      # days before, so a month is not precise enough.
+      date: null
+      confirmed: false
   lead_in_days: 21
   # Threshold sweep for the recommendation table.
   sweep:

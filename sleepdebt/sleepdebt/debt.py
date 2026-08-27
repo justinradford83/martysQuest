@@ -141,7 +141,9 @@ def sessions_to_nights(sessions: Iterable[dict], *,
     allowed = {t.lower() for t in count_types}
     acc: Dict[date, dict] = {}
     for s in sessions:
-        if str(s.get("type", "")).lower() not in allowed:
+        # Substring match so "nap" also admits Oura's "late_nap".
+        t = str(s.get("type", "")).lower()
+        if not any(a == t or a in t for a in allowed):
             continue
         d = s["day"]
         slot = acc.setdefault(d, {"hours": 0.0, "sessions": 0, "rhr": None})

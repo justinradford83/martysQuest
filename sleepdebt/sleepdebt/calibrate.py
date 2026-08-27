@@ -127,11 +127,18 @@ def run(cfg, nights: Dict[date, Night], outdir: Path) -> dict:
     cal = cfg.raw.get("calibration", {})
     lead_in = int(cal.get("lead_in_days", 21))
     episodes: List[Tuple[date, str]] = []
+    unconfirmed = []
     for e in cal.get("episodes", []) or []:
-        try:
-            episodes.append((date.fromisoformat(str(e["date"])), str(e.get("label", "episode"))))
-        except (KeyError, ValueError):
-            print(f"skipping malformed episode entry: {e!r}", file=sys.stderr)
+        label = str(e.get("label", "episode"))
+        if not e.get("date"):
+            unconfirmed.append(f"{label}: no date")
+        elif e.get("confirmed") is not True:
+            unconfirmed.append(f"{label} ({e['date']}): not confirmed")
+        else:
+            try:
+                episodes.append((date.fromisoformat(str(e["date"])), label))
+            except ValueError:
+                unconfirmed.append(f"{label}: {e['date']!r} is not a date")
 
     if not nights:
         raise SystemExit("no sleep data — nothing to calibrate on")
@@ -166,7 +173,9 @@ def run(cfg, nights: Dict[date, Night], outdir: Path) -> dict:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         w.writeheader(); w.writerows(rows)
 
-    rec = recommend(rows, len(episodes))
+    # Never recommend a threshold fitted to guessed dates — a fitted-looking
+    # wrong answer is more dangerous than a visibly missing one.
+    rec = None if unconfirmed else recommend(rows, len(episodes))
 
     # ---- lead-in detail per episode ----
     by_day = {p.day: p for p in series}
@@ -209,6 +218,7 @@ def run(cfg, nights: Dict[date, Night], outdir: Path) -> dict:
         "window_days": cfg.window_days,
         "episodes": lead_detail,
         "recommendation": rec,
+        "unconfirmed_episodes": unconfirmed,
         "outputs": {"nightly_csv": str(nightly), "sweep_csv": str(sweep_csv),
                     "plot_svg": str(outdir / "sleep_debt.svg")},
     }
@@ -235,7 +245,13 @@ def _print_report(r: dict, cfg) -> None:
               f"{e['mean_sleep_hours']:.1f} h over {e['days_with_data']} days")
     rec = r["recommendation"]
     p("\n  RECOMMENDED THRESHOLD")
-    if not rec:
+    if r.get("unconfirmed_episodes"):
+        p("    Withheld — these episodes are not usable yet:")
+        for u in r["unconfirmed_episodes"]:
+            p(f"      · {u}")
+        p("    Fill in the real dates, set `confirmed: true`, and re-run.")
+        p("    The curve and CSVs are still valid; only the fit is blocked.")
+    elif not rec:
         p("    None. No threshold in the sweep caught every annotated episode —")
         p("    either the episodes are not preceded by sleep debt in this data,")
         p("    or the dates need checking. Do NOT fall back to a generic number;")
