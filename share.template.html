@@ -288,7 +288,7 @@ function renderLedger(){
         (notes?'<td class="no">'+(e.note?esc(e.note):'<span class="muted">—</span>')+'</td>':'')+'</tr>';
     }).join("");
     const dnote=(notes&&st.daily.note)?'<tr><td class="t muted">—</td><td class="q">—</td>'+
-      '<td class="n">🌙 Sleep report<em>Oura</em></td><td class="e"><span class="pill neutral">Metrics</span></td>'+
+      '<td class="n">🌙 Sleep report<em>'+(st.daily.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td><td class="e"><span class="pill neutral">Metrics</span></td>'+
       '<td class="no">'+esc(st.daily.note)+'</td></tr>':'';
     return '<div class="day"><div class="dayhd"><h3>'+esc(longDate(iso))+'</h3>'+
       '<span class="dow">'+esc(dow(iso))+' · day '+daysBetween(INJURY,iso)+'</span>'+dotsHtml+

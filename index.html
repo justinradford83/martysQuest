@@ -1202,7 +1202,7 @@ function renderLedger(){
         '<td class="x"><button class="del" data-del="'+e.uid+'" aria-label="Delete entry">✕</button></td></tr>';
     }).join("");
     const dnote=st.daily.note?'<tr><td class="t muted">—</td><td class="q">—</td>'+
-      '<td class="n">🌙 Sleep report<em>Oura</em></td><td class="e"><span class="pill neutral">Metrics</span></td>'+
+      '<td class="n">🌙 Sleep report<em>'+(st.daily.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td><td class="e"><span class="pill neutral">Metrics</span></td>'+
       '<td class="no">'+esc(st.daily.note)+'</td><td class="x"></td></tr>':'';
     return '<div class="day"><div class="dayhd"><h3>'+esc(longDate(iso))+'</h3>'+
       '<span class="dow">'+esc(dow(iso))+' · day '+daysBetween(INJURY,iso)+'</span>'+dotsHtml+
@@ -1636,7 +1636,69 @@ document.getElementById("restoreBtn").onclick=()=>{
 
 if(state.settings && state.settings.theme) document.documentElement.setAttribute("data-theme",state.settings.theme);
 renderCatalog();
+
+function applyOura(delay){
+  const oura = importOura();
+  if(!oura) return false;
+  try{ history.replaceState(null, "", location.pathname + location.search); }
+  catch(e){ location.hash = ""; }
+  if(oura.unchanged) return false;          /* same number as last pull */
+  const msg = oura.error ? oura.error
+    : "Oura: "+oura.hours+" h logged for "+shortDate(oura.date)+
+      (oura.replaced ? " (was "+oura.was+" h)" : "");
+  setTimeout(()=>toast(msg), delay);
+  return !oura.error;
+}
+applyOura(400);
+
+/* If the app is already open when the automation fires, the browser treats the
+   new fragment as a same-document navigation and never reloads — so catch it
+   here too, or the morning's sleep would silently fail to import. */
+window.addEventListener("hashchange", ()=>{ if(applyOura(0)) renderAll(); });
+
 renderAll();
+
+/* ════════ OURA IMPORT ════════
+   The page cannot call Oura itself — the artifact sandbox blocks outbound
+   requests, and OAuth needs a client secret a browser must never hold. So
+   something outside (an iOS Shortcut, a Worker cron) does the call and hands
+   the result over by opening:
+
+     <app-url>#oura=YYYY-MM-DD:HOURS[:EFFICIENCY:RESTING_HR]
+
+   e.g. #oura=2026-08-18:4.7:88:60 — only the first two are required.
+   Values merge into that night's metrics; anything already recorded for the
+   day, like a pain score, is left alone. */
+function importOura(){
+  const m = /[#&]oura=([^&]+)/.exec(location.hash);
+  if(!m) return null;
+  const parts = decodeURIComponent(m[1]).split(":");
+  const date = (parts[0]||"").trim();
+  const hours = Number(parts[1]);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !isFinite(hours) || hours < 0 || hours > 24)
+    return {error:"That sleep link is not in a form I can read."};
+  if(LOAD_ERROR)
+    return {error:"Your saved record could not be read — import refused so nothing is overwritten."};
+
+  const rec = Object.assign({}, state.daily[date] || {});
+  const before = rec.sleepH;
+  const val = Math.round(hours*100)/100;
+  const eff0 = Number(parts[2]), hr0 = Number(parts[3]);
+  /* Several pulls a day mostly re-deliver the same night. If nothing moved,
+     take the import silently rather than announcing it again. */
+  if(before === val && rec.src === "oura" &&
+     (!parts[2] || rec.eff === eff0) && (!parts[3] || rec.rhr === hr0))
+    return {date, hours:val, unchanged:true};
+  rec.sleepH = val;
+  if(parts[2] && isFinite(eff0)) rec.eff = eff0;
+  if(parts[3] && isFinite(hr0))  rec.rhr = hr0;
+  rec.src = "oura";
+  const h = Math.floor(rec.sleepH), mm = Math.round((rec.sleepH-h)*60);
+  rec.note = "Oura: "+h+" h "+mm+" m";
+  state.daily[date] = rec;
+  save();
+  return {date, hours:rec.sleepH, replaced: before!=null && before!==rec.sleepH, was:before};
+}
 
 if(LOAD_ERROR){
   const w=document.getElementById("loadwarn");
