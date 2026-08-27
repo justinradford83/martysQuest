@@ -623,6 +623,8 @@ const CATALOG = [
   {id:"equip",  em:"🎓",   name:"Equipment graduation",    common:"walker → crutches → cane → none", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
   {id:"shower", em:"🚿",   name:"Shower / self-care",      common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Independence"},
   {id:"nap",    em:"🛌",   name:"Nap",                     common:"—", dose:"—", unit:"min", q:45, g:"body", fx:"Sleep debt"},
+  {id:"sleep_long",em:"😴", name:"Sleep",                   common:"Oura ring", dose:"—", unit:"h", q:0, g:"body", fx:"Sleep", retired:true},
+  {id:"sleep_nap", em:"🌥️", name:"Nap",                     common:"Oura ring", dose:"—", unit:"h", q:0, g:"body", fx:"Sleep", retired:true},
   {id:"note",   em:"📝",   name:"Journal note",            common:"free text", dose:"—", unit:"", q:1, g:"body", fx:"Note"}
 ];
 const BY_ID = Object.fromEntries(CATALOG.map(c=>[c.id,c]));
@@ -694,7 +696,7 @@ function h12(hm){ const [H,M]=hm.split(":").map(Number); const ap=H<12?"am":"pm"
 function timeOfDay(hm){ const H=Number(hm.split(":")[0]);
   return H<5?"Overnight":H<8?"Early morning":H<12?"Morning":H<17?"Afternoon":H<21?"Evening":"Night"; }
 function fmtQty(q,unit){ const n=(Math.round(q*100)/100).toString();
-  return unit ? n+" "+unit+(q!==1 && unit.length<7 && !unit.endsWith("s")?"s":"") : n; }
+  return unit ? n+" "+unit+(q!==1 && unit.length>2 && unit.length<7 && !unit.endsWith("s")?"s":"") : n; }
 function esc(x){ return String(x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("on");
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2200); }
@@ -887,6 +889,41 @@ function sleepChart(days){
     band+g+'<path d="'+area+'" fill="var(--accent)" opacity=".13"/>'+
     '<path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
     dots+lab+'</svg>';
+}
+function debtChart(isos){
+  const W=640,H=180,mL=40,mR=10,mT=14,mB=26,iw=W-mL-mR,ih=H-mT-mB;
+  const pts=isos.map((iso,i)=>{const d=sleepDebt(iso);
+    return d.observed ? {i, v:d.debt, iso, thin:d.coverage<0.5} : null;}).filter(Boolean);
+  if(!pts.length) return '<svg class="chart" viewBox="0 0 '+W+' '+H+'"><text x="'+(W/2)+'" y="'+(H/2)+
+    '" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-3)">no sleep recorded yet</text></svg>';
+  const vals=pts.map(p=>p.v);
+  let lo=Math.min(0,...vals), hi=Math.max(...vals,1);
+  const pad=(hi-lo)*0.12||1; lo-=pad; hi+=pad;
+  const y=v=>mT+ih-((v-lo)/(hi-lo))*ih, x=i=>mL+(i/Math.max(isos.length-1,1))*iw;
+  const ticks=[]; for(let k=0;k<=4;k++) ticks.push(lo+(hi-lo)*k/4);
+  let g=ticks.map(v=>'<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+
+    '" stroke="var(--grid)" stroke-width="1"/><text x="'+(mL-7)+'" y="'+(y(v)+3.5).toFixed(1)+
+    '" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+v.toFixed(0)+'</text>').join("");
+  if(lo<0&&hi>0) g+='<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(0).toFixed(1)+'" y2="'+y(0).toFixed(1)+
+    '" stroke="var(--ink-3)" stroke-width="1.5"/>';
+  let seg=[],paths=[],prev=null;
+  pts.forEach(p=>{ if(prev!==null&&p.i!==prev+1){paths.push(seg);seg=[];}
+    seg.push(x(p.i).toFixed(1)+","+y(p.v).toFixed(1)); prev=p.i; });
+  paths.push(seg);
+  const line=paths.filter(sg=>sg.length>1).map(sg=>
+    '<polyline points="'+sg.join(" ")+'" fill="none" stroke="var(--crit)" stroke-width="2" '+
+    'stroke-linejoin="round" stroke-linecap="round"/>').join("");
+  const last=pts[pts.length-1];
+  const dot='<circle cx="'+x(last.i).toFixed(1)+'" cy="'+y(last.v).toFixed(1)+
+    '" r="5" fill="var(--crit)" stroke="var(--surface)" stroke-width="2"/>';
+  const hits=pts.map(p=>'<circle cx="'+x(p.i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+
+    '" r="10" fill="transparent" data-tip="'+esc(shortDate(p.iso))+'|'+p.v+' h|'+
+    (p.thin?"sparse window":"")+'"/>').join("");
+  const lab=isos.map((iso,i)=>(i%6===0||i===isos.length-1)?'<text x="'+x(i).toFixed(1)+'" y="'+(H-8)+
+    '" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+
+    parseISO(iso).getDate()+'</text>':'').join("");
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Running sleep debt over 30 days">'+
+    g+line+dot+lab+hits+'</svg>';
 }
 function dotChart(isos){
   const W=640,H=160,mL=28,mR=10,mT=14,mB=26,iw=W-mL-mR,ih=H-mT-mB,max=6;

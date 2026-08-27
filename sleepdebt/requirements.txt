@@ -1,0 +1,5 @@
+PyYAML>=6.0
+requests>=2.31
+# Optional. Calibration always writes CSV and a dependency-free SVG plot;
+# install this only if you also want a PNG.
+# matplotlib>=3.7

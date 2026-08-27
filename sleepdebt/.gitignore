@@ -1,0 +1,8 @@
+__pycache__/
+.pytest_cache/
+# Runtime state and generated reports — never commit; state.json holds alert
+# history and calibration output contains ~2 years of personal sleep data.
+state.json
+state.tmp
+calibration/
+*.log

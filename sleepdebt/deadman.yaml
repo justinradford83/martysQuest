@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dead-man's switch — kept in its own file on purpose.
+#
+# Silence is signal. If data stops arriving, that is itself the thing worth
+# knowing about: ring not worn, token revoked, integration broken, job not
+# running. This check has no `enabled` flag and the loader will refuse to run
+# without this file, so it cannot be switched off in passing while tuning the
+# debt thresholds in config.yaml.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Consecutive days with no retrievable sleep data before notifying.
+silence_days: 3
+
+# Repeat the silence notice at most this often while the silence continues.
+repeat_every_days: 3
+
+# Who hears about it. Defaults to tier1 from config.yaml if left empty.
+recipients: []

@@ -1,0 +1,100 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Sleep-debt monitor configuration.
+#
+# Nothing in this system is hardcoded; every number below is read at runtime.
+# The dead-man's switch is deliberately NOT here — see deadman.yaml.
+# ─────────────────────────────────────────────────────────────────────────────
+
+oura:
+  # Credentials come from the environment, never from this file.
+  #   OURA_CLIENT_ID, OURA_CLIENT_SECRET, OURA_REFRESH_TOKEN
+  base_url: "https://api.ouraring.com/v2"
+  token_url: "https://api.ouraring.com/oauth/token"
+  # Oura serves roughly two years of history.
+  backfill_days: 730
+  timeout_seconds: 30
+
+debt:
+  # Hours of sleep per night treated as break-even.
+  # PLACEHOLDER until calibration runs — see README, "Calibration".
+  baseline_need_hours: 6.5
+
+  # Trailing window the debt is summed over.
+  window_days: 14
+
+  # Surplus nights offset debt. A 12 h night credits 12 - baseline_need.
+  # null = uncapped, which is the intended behaviour.
+  surplus_credit_cap_hours: null
+
+  # Days with no data are excluded from the window entirely — never imputed.
+  # Below this many observed days the window is too sparse to alert on, so
+  # debt alerting is suppressed. This does NOT suppress the dead-man's switch,
+  # which is the check that actually catches missing data.
+  min_observed_days: 7
+
+  # Which Oura session types count toward a night's total.
+  # Naps genuinely reduce sleep pressure, so they are included by default.
+  count_session_types: ["long_sleep", "sleep", "nap"]
+
+calibration:
+  # Known episodes, used to fit the threshold rather than guessing one.
+  # EXACT DATES REQUIRED — the lead-in analysis reports the 21 days before each,
+  # so a month alone is not enough. Replace these before running.
+  episodes:
+    - label: "acute episode"
+      date: "2026-08-15"        # PLACEHOLDER — confirm the actual date
+    - label: "hypomanic period"
+      date: "2025-01-15"        # PLACEHOLDER — confirm the actual date
+  lead_in_days: 21
+  # Threshold sweep for the recommendation table.
+  sweep:
+    min_hours: 4.0
+    max_hours: 30.0
+    step_hours: 0.5
+  output_dir: "./calibration"
+
+alerting:
+  # PLACEHOLDER. Do not go live on this number — run calibration first and
+  # replace it with the value the calibration report recommends.
+  threshold_hours: 10.0
+
+  # Debt must stay over threshold this many days running before firing.
+  # Suppresses single-night noise.
+  consecutive_days: 2
+
+  # Secondary corroboration from resting heart rate.
+  rhr:
+    # "OR"  — fire on debt alone at threshold_hours,
+    #         OR on debt at lower_threshold_hours WITH RHR elevated.
+    # "AND" — require both.
+    # "OFF" — ignore RHR entirely.
+    mode: "OR"
+    lower_threshold_hours: 7.0
+    delta_bpm: 5
+    baseline_days: 30
+
+  # Once fired, stay quiet this long...
+  cooldown_days: 3
+  # ...unless debt climbs this much further, which breaks the cooldown.
+  escalation_hours: 5.0
+
+recipients:
+  # Tier 1 gets numbers. Tier 2 gets plain language and no clinical framing.
+  tier1:
+    - name: "Justin"
+      sms: "+1XXXXXXXXXX"
+  tier2: []
+    # - name: "Kate"
+    #   sms: "+1XXXXXXXXXX"
+
+notifier:
+  # "twilio" | "console"  — console prints instead of sending, for dry runs.
+  backend: "console"
+  twilio:
+    # Credentials from the environment:
+    #   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN
+    from_number: "+1XXXXXXXXXX"
+
+storage:
+  # Alert history and last-seen data date. Must persist between runs.
+  state_path: "./state.json"

@@ -621,6 +621,8 @@ const CATALOG = [
   {id:"equip",  em:"🎓",   name:"Equipment graduation",    common:"walker → crutches → cane → none", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
   {id:"shower", em:"🚿",   name:"Shower / self-care",      common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Independence"},
   {id:"nap",    em:"🛌",   name:"Nap",                     common:"—", dose:"—", unit:"min", q:45, g:"body", fx:"Sleep debt"},
+  {id:"sleep_long",em:"😴", name:"Sleep",                   common:"Oura ring", dose:"—", unit:"h", q:0, g:"body", fx:"Sleep", retired:true},
+  {id:"sleep_nap", em:"🌥️", name:"Nap",                     common:"Oura ring", dose:"—", unit:"h", q:0, g:"body", fx:"Sleep", retired:true},
   {id:"note",   em:"📝",   name:"Journal note",            common:"free text", dose:"—", unit:"", q:1, g:"body", fx:"Note"}
 ];
 const BY_ID = Object.fromEntries(CATALOG.map(c=>[c.id,c]));
@@ -731,6 +733,8 @@ function migrate(o){
   o.entries ||= []; o.daily ||= {}; o.done ||= {}; o.board ||= {}; o.bench ||= {};
   o.settings ||= {apapTab:500, apapLimit:4000, theme:null};
   o.settings.timeUnit ||= "days";
+  o.settings.baselineNeed ??= 6.5;   /* keep in step with sleepdebt/config.yaml */
+  o.settings.debtWindow  ??= 14;
   return o;
 }
 function seedState(){
@@ -738,7 +742,7 @@ function seedState(){
     entries: SEED_ENTRIES.map((e,i)=>({uid:"s"+i, ...e})),
     daily: JSON.parse(JSON.stringify(SEED_DAILY)),
     done:{}, board:{}, bench:{},
-    settings:{apapTab:500, apapLimit:4000, theme:null, timeUnit:"days"}
+    settings:{apapTab:500, apapLimit:4000, theme:null, timeUnit:"days", baselineNeed:6.5, debtWindow:14}
   };
 }
 function save(){
@@ -764,7 +768,7 @@ function h12(hm){ const [H,M]=hm.split(":").map(Number); const ap=H<12?"am":"pm"
 function timeOfDay(hm){ const H=Number(hm.split(":")[0]);
   return H<5?"Overnight":H<8?"Early morning":H<12?"Morning":H<17?"Afternoon":H<21?"Evening":"Night"; }
 function fmtQty(q,unit){ const n=(Math.round(q*100)/100).toString();
-  return unit ? n+" "+unit+(q!==1 && unit.length<7 && !unit.endsWith("s")?"s":"") : n; }
+  return unit ? n+" "+unit+(q!==1 && unit.length>2 && unit.length<7 && !unit.endsWith("s")?"s":"") : n; }
 function esc(x){ return String(x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("on");
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2200); }
@@ -1241,6 +1245,27 @@ function buildCSV(){
 }
 
 /* ════════ 4 · DASHBOARD ════════ */
+/* ════════ SLEEP DEBT ════════
+   Mirrors sleepdebt/debt.py — keep the two in step.
+     nightly_deficit(d) = baseline_need - hours(d)
+     debt = sum over OBSERVED days in the trailing window
+   Missing days are excluded, never imputed, so a sparse window sums fewer
+   terms and can only ever understate. `coverage` travels with the number. */
+function sleepDebt(asOf, windowDays, baseline){
+  windowDays = windowDays || state.settings.debtWindow || 14;
+  baseline   = baseline   || state.settings.baselineNeed || 6.5;
+  let debt=0, observed=0, total=0;
+  for(let i=0;i<windowDays;i++){
+    const d = state.daily[addDays(asOf,-i)];
+    if(!d || d.sleepH==null) continue;         /* excluded, not imputed */
+    debt += baseline - d.sleepH;               /* surplus credits, uncapped */
+    total += d.sleepH; observed++;
+  }
+  return {debt: Math.round(debt*10)/10, observed, windowDays, baseline,
+          mean: observed ? Math.round(total/observed*10)/10 : null,
+          coverage: observed/windowDays};
+}
+
 function lastN(n){ const o=[], t=todayISO(); for(let i=n-1;i>=0;i--) o.push(addDays(t,-i)); return o; }
 function renderDash(){
   const iso=todayISO(), st=dayStats(iso), lim=state.settings.apapLimit;
@@ -1264,6 +1289,7 @@ function renderDash(){
   const avail7=lastN(7).filter(d=>d>=INJURY&&d<=iso).reduce((a,d)=>a+dayMeta(d).live.length,0);
   const overDays=d14.filter(x=>x.apap>lim).length, apapDays=d14.filter(x=>x.apap>0).length;
   const ph=phaseOn(iso);
+  const dbt=sleepDebt(iso);
 
   const tiles=[
     {k:"Since the break", v:daysBetween(INJURY,iso), s:"days", d:"Femur fractured "+longDate(INJURY)},
@@ -1274,6 +1300,11 @@ function renderDash(){
     {k:"Last hydromorphone", v:lH?clock(lH.mins):"—", s:"", d:"the number you want climbing"},
     {k:"Opioid doses, 7 days", v:Math.round(op7*10)/10, s:"", d:trend(op7,opPrev)},
     {k:"Avg sleep, 7 days", v:avg7!=null?avg7.toFixed(1):"—", s:avg7!=null?"h":"", d:avg7!=null&&avg7<7?"under the 7 h that earns RECOVER":"earning RECOVER"},
+    {k:"Sleep debt, "+dbt.windowDays+" days", v:dbt.observed?dbt.debt:"—", s:dbt.observed?"h":"",
+     d: dbt.observed
+        ? (dbt.observed+" of "+dbt.windowDays+" nights recorded"+
+           (dbt.coverage<0.5?" — too sparse to trust":"")+", vs "+dbt.baseline+" h baseline")
+        : "no sleep recorded in the window"},
     {k:"Days over ceiling, 14", v:overDays, s:"/ "+apapDays, d:"days above "+lim.toLocaleString()+" mg"}
   ];
 
@@ -1298,6 +1329,10 @@ function renderDash(){
     '<div class="card"><figure><figcaption><div class="t">Sleep, 14 days</div>'+
       '<div class="s">7 hours earns the RECOVER dot. Bone healing happens largely in slow-wave sleep.</div></figcaption>'+
       '<div class="chartbox">'+sleepChart(d14)+'</div></figure></div>'+
+    '<div class="card"><figure><figcaption><div class="t">Sleep debt, running '+dbt.windowDays+'-day total</div>'+
+      '<div class="s">Hours short of the '+dbt.baseline+' h baseline, summed over the trailing window. '+
+      'Long nights pay it back. Nights with no data are left out rather than guessed, so gaps pull the line down.</div></figcaption>'+
+      '<div class="chartbox">'+debtChart(lastN(30))+'</div></figure></div>'+
     '<div class="card"><figure><figcaption><div class="t">Dots earned, 14 days</div>'+
       '<div class="s">Stacked by category, fixed order — same slots as the board</div></figcaption>'+
       '<div class="chartbox">'+dotChart(lastN(14))+'</div>'+
@@ -1325,6 +1360,10 @@ function openSettings(){
   showSheet('<h3>⚙️ Dose strengths</h3><p class="sh-sub">Set these to what is actually in your bottle</p>'+
     '<div class="field"><label>Tylenol tablet strength (mg)</label><input type="number" id="tab" step="25" value="'+state.settings.apapTab+'"></div>'+
     '<div class="field"><label>Daily acetaminophen ceiling (mg)</label><input type="number" id="lim" step="500" value="'+state.settings.apapLimit+'"></div>'+
+    '<div class="row2"><div class="field"><label>Sleep baseline (h)</label>'+
+      '<input type="number" id="base" step="0.25" value="'+state.settings.baselineNeed+'"></div>'+
+    '<div class="field"><label>Debt window (days)</label>'+
+      '<input type="number" id="win" step="1" value="'+state.settings.debtWindow+'"></div></div>'+
     '<p style="font-size:12.5px;color:var(--ink-2);margin:0 0 14px">Extra Strength is 500 mg, Regular is 325 mg, '+
     'Arthritis is 650 mg. The usual adult ceiling is 4,000 mg; many clinicians set 3,000 mg for extended use.</p>'+
     '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="ok">Save</button></div>');
@@ -1332,6 +1371,8 @@ function openSettings(){
   document.getElementById("ok").onclick=()=>{
     state.settings.apapTab=Number(document.getElementById("tab").value)||500;
     state.settings.apapLimit=Number(document.getElementById("lim").value)||4000;
+    state.settings.baselineNeed=Number(document.getElementById("base").value)||6.5;
+    state.settings.debtWindow=Math.max(1,Number(document.getElementById("win").value)||14);
     save(); closeSheet(); renderAll(); toast("Strengths updated");
   };
 }
@@ -1378,6 +1419,41 @@ function sleepChart(days){
     band+g+'<path d="'+area+'" fill="var(--accent)" opacity=".13"/>'+
     '<path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
     dots+lab+'</svg>';
+}
+function debtChart(isos){
+  const W=640,H=180,mL=40,mR=10,mT=14,mB=26,iw=W-mL-mR,ih=H-mT-mB;
+  const pts=isos.map((iso,i)=>{const d=sleepDebt(iso);
+    return d.observed ? {i, v:d.debt, iso, thin:d.coverage<0.5} : null;}).filter(Boolean);
+  if(!pts.length) return '<svg class="chart" viewBox="0 0 '+W+' '+H+'"><text x="'+(W/2)+'" y="'+(H/2)+
+    '" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-3)">no sleep recorded yet</text></svg>';
+  const vals=pts.map(p=>p.v);
+  let lo=Math.min(0,...vals), hi=Math.max(...vals,1);
+  const pad=(hi-lo)*0.12||1; lo-=pad; hi+=pad;
+  const y=v=>mT+ih-((v-lo)/(hi-lo))*ih, x=i=>mL+(i/Math.max(isos.length-1,1))*iw;
+  const ticks=[]; for(let k=0;k<=4;k++) ticks.push(lo+(hi-lo)*k/4);
+  let g=ticks.map(v=>'<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+
+    '" stroke="var(--grid)" stroke-width="1"/><text x="'+(mL-7)+'" y="'+(y(v)+3.5).toFixed(1)+
+    '" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+v.toFixed(0)+'</text>').join("");
+  if(lo<0&&hi>0) g+='<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(0).toFixed(1)+'" y2="'+y(0).toFixed(1)+
+    '" stroke="var(--ink-3)" stroke-width="1.5"/>';
+  let seg=[],paths=[],prev=null;
+  pts.forEach(p=>{ if(prev!==null&&p.i!==prev+1){paths.push(seg);seg=[];}
+    seg.push(x(p.i).toFixed(1)+","+y(p.v).toFixed(1)); prev=p.i; });
+  paths.push(seg);
+  const line=paths.filter(sg=>sg.length>1).map(sg=>
+    '<polyline points="'+sg.join(" ")+'" fill="none" stroke="var(--crit)" stroke-width="2" '+
+    'stroke-linejoin="round" stroke-linecap="round"/>').join("");
+  const last=pts[pts.length-1];
+  const dot='<circle cx="'+x(last.i).toFixed(1)+'" cy="'+y(last.v).toFixed(1)+
+    '" r="5" fill="var(--crit)" stroke="var(--surface)" stroke-width="2"/>';
+  const hits=pts.map(p=>'<circle cx="'+x(p.i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+
+    '" r="10" fill="transparent" data-tip="'+esc(shortDate(p.iso))+'|'+p.v+' h|'+
+    (p.thin?"sparse window":"")+'"/>').join("");
+  const lab=isos.map((iso,i)=>(i%6===0||i===isos.length-1)?'<text x="'+x(i).toFixed(1)+'" y="'+(H-8)+
+    '" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+
+    parseISO(iso).getDate()+'</text>':'').join("");
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Running sleep debt over 30 days">'+
+    g+line+dot+lab+hits+'</svg>';
 }
 function dotChart(isos){
   const W=640,H=160,mL=28,mR=10,mT=14,mB=26,iw=W-mL-mR,ih=H-mT-mB,max=6;
@@ -1642,9 +1718,10 @@ function applyOura(delay){
   if(!oura) return false;
   try{ history.replaceState(null, "", location.pathname + location.search); }
   catch(e){ location.hash = ""; }
-  if(oura.unchanged) return false;          /* same number as last pull */
+  if(oura.unchanged) return false;          /* same sessions as the last pull */
   const msg = oura.error ? oura.error
-    : "Oura: "+oura.hours+" h logged for "+shortDate(oura.date)+
+    : "Oura: "+oura.total+" h across "+oura.sessions+" session"+
+      (oura.sessions===1?"":"s")+" for "+shortDate(oura.day)+
       (oura.replaced ? " (was "+oura.was+" h)" : "");
   setTimeout(()=>toast(msg), delay);
   return !oura.error;
@@ -1659,45 +1736,73 @@ window.addEventListener("hashchange", ()=>{ if(applyOura(0)) renderAll(); });
 renderAll();
 
 /* ════════ OURA IMPORT ════════
-   The page cannot call Oura itself — the artifact sandbox blocks outbound
-   requests, and OAuth needs a client secret a browser must never hold. So
-   something outside (an iOS Shortcut, a Worker cron) does the call and hands
-   the result over by opening:
+   The page cannot call Oura itself — the sandbox blocks outbound requests, and
+   OAuth needs a client secret a browser must never hold. Something outside does
+   the call and hands the result over by opening:
 
-     <app-url>#oura=YYYY-MM-DD:HOURS[:EFFICIENCY:RESTING_HR]
+     <app-url>#oura=YYYY-MM-DD&s=HH:MM,HOURS,TYPE&s=...&rhr=60&eff=88
 
-   e.g. #oura=2026-08-18:4.7:88:60 — only the first two are required.
-   Values merge into that night's metrics; anything already recorded for the
-   day, like a pain score, is left alone. */
+   The day key is Oura's own: the day you woke, so a pull this morning files
+   last night's sleep under today. Each session becomes its own ledger entry at
+   the time it started, and the day's total is their sum. Entry ids are derived
+   from day+start, so the 3pm and 8pm pulls overwrite the 10am rows rather than
+   duplicating them. */
+function sleepItemFor(type){ return /nap/i.test(type||"") ? "sleep_nap" : "sleep_long"; }
+
 function importOura(){
-  const m = /[#&]oura=([^&]+)/.exec(location.hash);
+  const h = location.hash;
+  const m = /[#&]oura=([^&]+)/.exec(h);
   if(!m) return null;
-  const parts = decodeURIComponent(m[1]).split(":");
-  const date = (parts[0]||"").trim();
-  const hours = Number(parts[1]);
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !isFinite(hours) || hours < 0 || hours > 24)
-    return {error:"That sleep link is not in a form I can read."};
+  const day = decodeURIComponent(m[1]).trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(day))
+    return {error:"That sleep link has no readable date."};
   if(LOAD_ERROR)
     return {error:"Your saved record could not be read — import refused so nothing is overwritten."};
 
-  const rec = Object.assign({}, state.daily[date] || {});
-  const before = rec.sleepH;
-  const val = Math.round(hours*100)/100;
-  const eff0 = Number(parts[2]), hr0 = Number(parts[3]);
-  /* Several pulls a day mostly re-deliver the same night. If nothing moved,
-     take the import silently rather than announcing it again. */
-  if(before === val && rec.src === "oura" &&
-     (!parts[2] || rec.eff === eff0) && (!parts[3] || rec.rhr === hr0))
-    return {date, hours:val, unchanged:true};
-  rec.sleepH = val;
-  if(parts[2] && isFinite(eff0)) rec.eff = eff0;
-  if(parts[3] && isFinite(hr0))  rec.rhr = hr0;
+  const sessions = [];
+  const re = /[#&]s=([^&]+)/g;
+  let g;
+  while((g = re.exec(h))){
+    const [time, hrs, type] = decodeURIComponent(g[1]).split(",");
+    const hours = Number(hrs);
+    if(!/^\d{1,2}:\d{2}$/.test(time||"") || !isFinite(hours) || hours<=0 || hours>24) continue;
+    sessions.push({time: time.padStart(5,"0"), hours: Math.round(hours*100)/100,
+                   type: (type||"long_sleep").trim()});
+  }
+  if(!sessions.length) return {error:"That sleep link carried no usable sessions."};
+
+  const num = k => { const x=new RegExp("[#&]"+k+"=([^&]+)").exec(h);
+                     return x && isFinite(Number(x[1])) ? Number(x[1]) : null; };
+
+  /* Drop any previously imported sessions for this day, then re-add — so a
+     later pull replaces the day cleanly even if Oura merged or split records. */
+  const prefix = "oura:"+day+":";
+  const rows = sessions.map(x=>({
+    uid: prefix+x.time, date: day, time: x.time, id: sleepItemFor(x.type),
+    q: x.hours, note: "Oura · "+x.type }));
+  const sig = list => list.filter(e=>e.uid.startsWith(prefix))
+                          .map(e=>e.uid+"|"+e.q).sort().join(";");
+  const before = sig(state.entries), after = sig(rows);
+  state.entries = state.entries.filter(e=>!e.uid.startsWith(prefix)).concat(rows);
+
+  const total = Math.round(sessions.reduce((a,x)=>a+x.hours,0)*100)/100;
+  const rec = Object.assign({}, state.daily[day] || {});
+  const prevTotal = rec.sleepH;
+  rec.sleepH = total;
+  const eff = num("eff"), rhr = num("rhr");
+  if(eff !== null) rec.eff = eff;
+  if(rhr !== null) rec.rhr = rhr;
   rec.src = "oura";
-  const h = Math.floor(rec.sleepH), mm = Math.round((rec.sleepH-h)*60);
-  rec.note = "Oura: "+h+" h "+mm+" m";
-  state.daily[date] = rec;
+  const hh = Math.floor(total), mm = Math.round((total-hh)*60);
+  rec.note = "Oura: "+hh+" h "+mm+" m across "+sessions.length+
+             " session"+(sessions.length===1?"":"s");
+  state.daily[day] = rec;
+
+  if(before === after && prevTotal === total)
+    return {day, total, sessions:sessions.length, unchanged:true};
   save();
-  return {date, hours:rec.sleepH, replaced: before!=null && before!==rec.sleepH, was:before};
+  return {day, total, sessions:sessions.length,
+          replaced: prevTotal!=null && prevTotal!==total, was:prevTotal};
 }
 
 if(LOAD_ERROR){
