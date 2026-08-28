@@ -13,9 +13,6 @@ def test_deadman_file_is_required(tmp_path):
     with pytest.raises(config.ConfigError, match="dead-man"):
         config.load(tmp_path)
 
-def test_placeholder_threshold_warns():
-    assert any("uncalibrated" in w for w in config.load().validate())
-
 def test_bad_rhr_mode_rejected(tmp_path):
     raw = yaml.safe_load((config.HERE / "config.yaml").read_text())
     raw["alerting"]["rhr"]["mode"] = "MAYBE"

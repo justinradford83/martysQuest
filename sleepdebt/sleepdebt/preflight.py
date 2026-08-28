@@ -32,50 +32,16 @@ class Check:
 
 def _cfg_checks(cfg) -> List[Check]:
     out = [Check("config.yaml and deadman.yaml load", OK,
-                 f"baseline {cfg.baseline_need:g} h · {cfg.window_days}-day window · "
-                 f"RHR mode {cfg.rhr_mode}")]
+                 f"baseline {cfg.baseline_need:g} h · {cfg.window_days}-day window")]
 
-    eps = cfg.episodes()
-    bad = [e for e in eps if not e.get("date") or e.get("confirmed") is not True]
-    out.append(Check(
-        "calibration episodes confirmed",
-        OK if eps and not bad else FAIL,
-        f"{len(eps) - len(bad)} of {len(eps)} usable",
-        "" if not bad else
-        "set the real date and `confirmed: true` for: " +
-        ", ".join(f"{e.get('label')}" for e in bad)))
-
-    report = cfg.path / str(cfg.raw.get("calibration", {})
-                            .get("output_dir", "./calibration")) / "report.json"
-    if report.exists():
-        try:
-            r = json.loads(report.read_text())
-            rec = r.get("recommendation")
-            if rec:
-                match = abs(float(rec["threshold_hours"]) - cfg.threshold_hours) < 1e-6
-                out.append(Check(
-                    "threshold matches calibration", OK if match else WARN,
-                    f"config {cfg.threshold_hours:g} h vs recommended "
-                    f"{rec['threshold_hours']:g} h",
-                    "" if match else "deliberate override is fine — just be sure it is deliberate"))
-            else:
-                out.append(Check("calibration produced a recommendation", FAIL,
-                                 "report.json has none",
-                                 "confirm the episode dates and re-run calibrate"))
-            out.append(Check("calibration has been run", OK,
-                             f"{r.get('nights_with_data')} nights, "
-                             f"{r.get('coverage', 0) * 100:.0f}% coverage"))
-        except (json.JSONDecodeError, KeyError, TypeError) as exc:
-            out.append(Check("calibration report readable", FAIL, str(exc),
-                             "re-run `python -m sleepdebt.calibrate`"))
-    else:
-        out.append(Check("calibration has been run", FAIL, f"no {report}",
-                         "run `python -m sleepdebt.calibrate`"))
-
-    out.append(Check("threshold marked calibrated", OK if cfg.calibrated else FAIL,
-                     f"threshold_hours = {cfg.threshold_hours:g}",
-                     "" if cfg.calibrated else
-                     "add `_calibrated: true` to config.yaml once you have reviewed the sweep"))
+    try:
+        tiers = cfg.tiers
+        out.append(Check("debt tiers configured", OK,
+                         " / ".join(f"{t['hours']:g} h {t['label']}" for t in tiers),
+                         "crossing up a tier always alerts; same tier waits out the "
+                         f"{cfg.cooldown_days}-day cooldown"))
+    except config.ConfigError as exc:
+        out.append(Check("debt tiers configured", FAIL, str(exc)))
 
     ph = [f"{t}:{r.get('name')}" for t, ppl in (("tier1", cfg.tier1), ("tier2", cfg.tier2))
           for r in ppl if "XXXX" in str(r.get("sms", ""))]

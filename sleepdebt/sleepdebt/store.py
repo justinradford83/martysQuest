@@ -56,6 +56,19 @@ class Store:
     def last_silence_notice(self, d: date) -> None:
         self.data["last_silence_notice"] = d.isoformat()
 
+    @property
+    def last_tier(self) -> Optional[float]:
+        """Highest tier already alerted at during the current climb."""
+        v = self.data.get("last_tier")
+        return float(v) if v is not None else None
+
+    @last_tier.setter
+    def last_tier(self, v: Optional[float]) -> None:
+        if v is None:
+            self.data.pop("last_tier", None)
+        else:
+            self.data["last_tier"] = float(v)
+
     def streak(self) -> int:
         return int(self.data.get("over_threshold_streak", 0))
 

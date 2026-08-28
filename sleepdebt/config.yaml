@@ -45,65 +45,35 @@ debt:
   # Matching is case-insensitive; "nap" also matches "late_nap".
   count_session_types: ["long_sleep", "sleep", "nap", "late_nap"]
 
-calibration:
-  # Known episodes, used to fit the threshold rather than guessing one.
-  # EXACT DATES REQUIRED — the lead-in analysis reports the 21 days before each,
-  # so a month alone is not enough. Replace these before running.
-  # Every episode needs `confirmed: true` before calibration will recommend a
-  # threshold. Fitting to a guessed date produces a fitted-looking wrong answer,
-  # which is worse than an obviously missing one.
-  #
-  # Only one episode is in scope, by choice. That means the fit has nothing to
-  # cross-validate against: any threshold low enough to catch this one date
-  # satisfies "catches every episode", so the recommendation rests entirely on
-  # the false-alarm rate. Treat the result as provisional and re-run calibration
-  # if another episode is ever added.
-  episodes:
-    - label: "acute episode"
-      # Confirmed by Justin. Matches the ledger: mental health assessment at
-      # AAC, then urgent care on Hastings, 15 Aug 2026.
-      date: "2026-08-15"
-      confirmed: true
-  lead_in_days: 21
-  # Threshold sweep for the recommendation table.
-  sweep:
-    min_hours: 4.0
-    max_hours: 30.0
-    step_hours: 0.5
-  output_dir: "./calibration"
-
 alerting:
-  # PLACEHOLDER. Do not go live on this number — run calibration first and
-  # replace it with the value the calibration report recommends.
-  threshold_hours: 10.0
+  # Debt tiers, in hours. Each is a separate warning level. Crossing UP into a
+  # higher tier always alerts, even inside a cooldown — escalation must get
+  # through. Re-alerting at the same tier waits for the cooldown.
+  tiers:
+    - hours: 6.0
+      label: "building"
+    - hours: 8.0
+      label: "high"
+    - hours: 10.0
+      label: "severe"
 
-  # How many false alerts a year you will tolerate. This is the input that
-  # actually decides the threshold: among thresholds that catch the annotated
-  # episodes, calibration picks the one giving the most warning while staying
-  # inside this budget. Set it honestly — the cost of setting it too high is
-  # that you start ignoring the alerts, which is the failure mode this whole
-  # system exists to avoid.
-  max_false_alerts_per_year: 4.0
-
-  # Debt must stay over threshold this many days running before firing.
-  # Suppresses single-night noise.
+  # Debt must sit at or above the lowest tier this many days running before
+  # anything fires. Suppresses single-night noise.
   consecutive_days: 2
 
-  # Secondary corroboration from resting heart rate.
+  # Once debt drops back below the lowest tier the ladder resets, so a later
+  # climb warns again from the bottom.
+
+  # Quiet period before re-alerting at the SAME tier. Escalation ignores it.
+  cooldown_days: 3
+
   rhr:
-    # "OR"  — fire on debt alone at threshold_hours,
-    #         OR on debt at lower_threshold_hours WITH RHR elevated.
-    # "AND" — require both.
-    # "OFF" — ignore RHR entirely.
-    mode: "OR"
-    lower_threshold_hours: 7.0
+    # Resting heart rate is no longer a trigger — the tiers are the trigger.
+    # When "ON", an elevation over the trailing baseline is added to the tier-1
+    # message as corroborating detail. "OFF" omits it.
+    mode: "ON"
     delta_bpm: 5
     baseline_days: 30
-
-  # Once fired, stay quiet this long...
-  cooldown_days: 3
-  # ...unless debt climbs this much further, which breaks the cooldown.
-  escalation_hours: 5.0
 
 recipients:
   # Tier 1 gets numbers. Tier 2 gets plain language and no clinical framing.

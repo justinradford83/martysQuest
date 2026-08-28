@@ -14,9 +14,8 @@ export OURA_REFRESH_TOKEN=...            #    from what it prints
 
 python -m sleepdebt.preflight            # what is still blocking go-live
 python -m sleepdebt.oura --verify        # 1. confirm the field mapping
-#    edit config.yaml: real episode dates + confirmed: true
-python -m sleepdebt.calibrate            # 2. fit the threshold — do not skip
-#    edit config.yaml: threshold_hours, _calibrated: true, real numbers, twilio
+python -m sleepdebt.history              # 2. see how often the tiers are hit
+#    edit config.yaml: real numbers, notifier.backend: twilio
 python -m sleepdebt.preflight            # 3. must print READY
 python -m sleepdebt.run --dry-run        # 4. decide, send nothing
 python -m sleepdebt.run                  # 5. live
@@ -27,9 +26,9 @@ python -m sleepdebt.run                  # 5. live
 `python -m sleepdebt.run` **refuses to send** while any of these is unresolved,
 and exits 2:
 
-- threshold not marked `_calibrated: true`
-- any calibration episode without a date, or without `confirmed: true`
+- no tiers configured
 - any recipient still on a placeholder number
+- a placeholder Twilio sending number
 
 `--dry-run` always works, and the dead-man's switch is unaffected — it does not
 depend on the threshold, so a half-configured system still tells you when data
@@ -78,40 +77,69 @@ things guard against reading that as good news — `min_observed_days`, below wh
 debt alerting is suppressed as too sparse to judge, and the dead-man's switch,
 which is what actually catches the gap.
 
-## Calibration
+## History
 
-`python -m sleepdebt.calibrate` backfills ~2 years, then writes to `calibration/`:
+`python -m sleepdebt.history` backfills ~2 years and writes to `history/`:
 
 | file | what |
 |---|---|
-| `nightly.csv` | per-night hours, deficit, running debt, coverage |
-| `threshold_sweep.csv` | every candidate threshold vs episodes caught and false-alarm rate |
-| `sleep_debt.svg` | the curve, with episode lead-ins shaded |
-| `report.json` | the above, machine-readable |
+| `nightly.csv` | per-night hours, deficit, running debt, tier reached, coverage |
+| `sleep_debt.svg` | the curve |
+| `report.json` | days spent at each tier, and every alert that *would* have fired |
 
-Put your real episode dates in `calibration.episodes` first — exact dates, not
-months, since the report covers the 21 days preceding each.
+Not a gate — the tiers are fixed in config. It exists so you can see how often
+each tier is actually reached, and therefore how often you would be messaged.
+If the replay says more than one alert a month, the tiers are too low for your
+baseline, and the report says so.
 
-The recommendation is the lowest false-alarm rate among thresholds that catch
-every annotated episode, ties broken toward the lower threshold for earlier
-warning. Read `threshold_sweep.csv` before accepting it; the trade-off is yours
-to make, and a threshold that fires eleven times a year will get muted and then
-deleted.
-
-Re-tune without re-hitting the API: `python -m sleepdebt.calibrate --from-csv calibration/nightly.csv`
+Re-run without re-hitting the API:
+`python -m sleepdebt.history --from-csv history/nightly.csv`
 
 ## Alerting
 
-1. **Debt** over `threshold_hours` for `consecutive_days` running.
-2. **RHR corroboration** — `AND`, `OR`, or `OFF`. `OR` is the default: high debt
-   alone, or lower debt plus RHR elevated over its 30-day baseline. RHR that
-   cannot be determined is `None` and never silently counts as "not elevated".
-3. **Dead-man's switch** — no data for `silence_days`. Lives in its own
-   `deadman.yaml`, has no enable flag, and the loader refuses to start without
-   it. Silence is signal, so it cannot be switched off while tuning thresholds.
+Three debt tiers, set in `config.yaml`:
 
-Cooldown suppresses repeats for `cooldown_days`, broken by a further
-`escalation_hours` of debt. No daily nagging; escalation still gets through.
+```yaml
+tiers:
+  - {hours:  6.0, label: "building"}
+  - {hours:  8.0, label: "high"}
+  - {hours: 10.0, label: "severe"}
+```
+
+- Debt must sit at or above the lowest tier for `consecutive_days` before
+  anything fires. Suppresses single-night noise.
+- **Crossing up into a higher tier fires immediately**, cooldown or not — a
+  worsening picture always gets through.
+- Staying at the same tier waits out `cooldown_days`.
+- Easing to a lower tier does not re-alert.
+- **Dropping below the lowest tier resets the ladder**, so a later climb warns
+  again from the bottom.
+
+Resting heart rate is no longer a trigger — the tiers are. With `rhr.mode: ON`,
+an elevation over the trailing baseline is added to the tier-1 message as
+corroborating detail.
+
+### Picking tiers that discriminate
+
+Debt is a sum over the window, so tier spacing is far tighter than it looks. At
+a 6.5 h baseline over 14 days:
+
+| tier | equivalent average night |
+|---|---|
+| 6 h | 6.07 h |
+| 8 h | 5.93 h |
+| 10 h | 5.79 h |
+
+The whole 6-to-10 ladder spans about **seventeen minutes of average nightly
+sleep**. Anyone averaging under ~5.8 h sits permanently at the top tier, and
+escalation stops carrying information — the cooldown-paced repeat becomes the
+only signal. Run `history` and read `alerts_per_year` before trusting the spacing.
+
+### Dead-man's switch
+
+No data for `silence_days`. Lives in its own `deadman.yaml`, has no enable flag,
+and the loader refuses to start without it. Silence is signal, so it cannot be
+switched off while tuning tiers.
 
 Two message tiers. Tier 1 gets numbers. Tier 2 gets plain language, no clinical
 framing, and an explicit ask.

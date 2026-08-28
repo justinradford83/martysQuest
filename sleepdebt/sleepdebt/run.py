@@ -16,8 +16,8 @@ from datetime import date, timedelta
 from typing import Optional
 
 from . import config, notify
-from .alerting import (apply_cooldown, evaluate_debt, evaluate_silence,
-                       silence_body, tier1_body, tier2_body)
+from .alerting import (evaluate_debt, evaluate_silence, silence_body,
+                       tier1_body, tier2_body)
 from .debt import compute_debt, rhr_baseline, rhr_elevated, sessions_to_nights
 from .store import Store
 
@@ -96,35 +96,37 @@ def main(argv=None) -> int:
     flag = (None if cfg.rhr_mode == "OFF"
             else rhr_elevated(nights, today, delta_bpm=cfg.rhr_delta_bpm,
                               baseline_days=cfg.rhr_baseline_days))
-    decision = evaluate_debt(point, store.streak(), threshold=cfg.threshold_hours,
-                             consecutive_days=cfg.consecutive_days, rhr_flag=flag,
-                             rhr_mode=cfg.rhr_mode,
-                             lower_threshold=cfg.rhr_lower_threshold)
+    last = store.last_alert
+    last_day = date.fromisoformat(last["day"]) if last else None
+    decision = evaluate_debt(point, store.streak(), store.last_tier, last_day, today,
+                             tiers=cfg.tiers, consecutive_days=cfg.consecutive_days,
+                             cooldown_days=cfg.cooldown_days)
 
-    # streak counts qualifying days, independent of cooldown
-    qualifies = decision.fire or decision.suppressed_by == "streak"
-    store.set_streak(store.streak() + 1 if qualifies else 0)
+    if decision.reset:
+        store.set_streak(0)
+        store.last_tier = None          # ladder resets below the lowest tier
+    else:
+        store.set_streak(store.streak() + 1)
 
-    decision = apply_cooldown(decision, store.last_alert, today,
-                              cooldown_days=cfg.cooldown_days,
-                              escalation_hours=cfg.escalation_hours)
-
+    tier_txt = (f"{decision.tier['hours']:g} h {decision.tier['label']}"
+                if decision.tier else "under tiers")
     print(f"debt {point.debt_hours:.1f} h over {point.observed_days}/"
-          f"{point.window_days} nights · streak {store.streak()} · "
-          f"{'FIRE' if decision.fire else 'hold'} — {decision.reason}", file=sys.stderr)
+          f"{point.window_days} nights - {tier_txt} - streak {store.streak()} - "
+          f"{'FIRE' if decision.fire else 'hold'} - {decision.reason}", file=sys.stderr)
 
     if decision.fire:
-        today_night = nights.get(today)
+        tn = nights.get(today)
         notify.fan_out(notifier, cfg.tier1,
                        tier1_body(point, decision, baseline=cfg.baseline_need,
                                   rhr_flag=flag,
-                                  rhr_today=today_night.rhr if today_night else None,
+                                  rhr_today=tn.rhr if tn else None,
                                   rhr_base=rhr_baseline(nights, today - timedelta(days=1),
                                                         cfg.rhr_baseline_days)),
                        "tier1")
-        notify.fan_out(notifier, cfg.tier2, tier2_body(point), "tier2")
+        notify.fan_out(notifier, cfg.tier2, tier2_body(point, decision), "tier2")
         if not a.dry_run:
             store.record_alert(today, point.debt_hours, decision.kind)
+            store.last_tier = decision.tier["hours"]
 
     if not a.dry_run:
         store.save()

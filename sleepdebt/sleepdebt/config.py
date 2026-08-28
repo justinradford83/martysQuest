@@ -51,24 +51,24 @@ class Config:
     def count_session_types(self) -> List[str]: return list(_require(self.raw, "debt.count_session_types"))
 
     @property
-    def threshold_hours(self) -> float: return float(_require(self.raw, "alerting.threshold_hours"))
-    @property
-    def max_false_alerts_per_year(self) -> float:
-        return float(self.raw["alerting"].get("max_false_alerts_per_year", 4.0))
+    def tiers(self) -> List[Dict[str, Any]]:
+        """Debt tiers, ascending. Each is a distinct warning level."""
+        raw = _require(self.raw, "alerting.tiers")
+        if not raw:
+            raise ConfigError("alerting.tiers is empty — nothing would ever fire")
+        return sorted(({"hours": float(t["hours"]),
+                        "label": str(t.get("label", f"{t['hours']:g} h"))}
+                       for t in raw), key=lambda t: t["hours"])
     @property
     def consecutive_days(self) -> int: return int(_require(self.raw, "alerting.consecutive_days"))
     @property
     def rhr_mode(self) -> str: return str(_require(self.raw, "alerting.rhr.mode")).upper()
-    @property
-    def rhr_lower_threshold(self) -> float: return float(_require(self.raw, "alerting.rhr.lower_threshold_hours"))
     @property
     def rhr_delta_bpm(self) -> float: return float(_require(self.raw, "alerting.rhr.delta_bpm"))
     @property
     def rhr_baseline_days(self) -> int: return int(_require(self.raw, "alerting.rhr.baseline_days"))
     @property
     def cooldown_days(self) -> int: return int(_require(self.raw, "alerting.cooldown_days"))
-    @property
-    def escalation_hours(self) -> float: return float(_require(self.raw, "alerting.escalation_hours"))
 
     @property
     def tier1(self) -> List[Dict[str, str]]: return list(_require(self.raw, "recipients.tier1"))
@@ -95,13 +95,6 @@ class Config:
                 f"from the environment, never from config.yaml.")
         return v
 
-    @property
-    def calibrated(self) -> bool:
-        return self.raw.get("_calibrated") is True
-
-    def episodes(self) -> List[Dict[str, Any]]:
-        return list(self.raw.get("calibration", {}).get("episodes") or [])
-
     def blockers(self) -> List[str]:
         """Conditions that must be cleared before live alerting.
 
@@ -109,21 +102,10 @@ class Config:
         at once instead of one per run.
         """
         out: List[str] = []
-        if not self.calibrated:
-            out.append("threshold is uncalibrated — run `python -m sleepdebt.calibrate`, "
-                       "set alerting.threshold_hours from its recommendation, then add "
-                       "`_calibrated: true` to config.yaml")
-        eps = self.episodes()
-        if not eps:
-            out.append("calibration.episodes is empty — nothing to fit a threshold against")
-        for e in eps:
-            label = e.get("label", "?")
-            if not e.get("date"):
-                out.append(f"episode {label!r} has no date — the lead-in report covers the "
-                           f"21 days before it, so a month is not precise enough")
-            elif e.get("confirmed") is not True:
-                out.append(f"episode {label!r} ({e['date']}) is not confirmed — set "
-                           f"`confirmed: true` once you have checked the date")
+        try:
+            self.tiers
+        except ConfigError as exc:
+            out.append(str(exc))
         for tier, people in (("tier1", self.tier1), ("tier2", self.tier2)):
             for r in people:
                 if "XXXX" in str(r.get("sms", "")):
@@ -135,20 +117,15 @@ class Config:
 
     def validate(self) -> List[str]:
         warn: List[str] = []
-        for p in ("debt.baseline_need_hours", "debt.window_days", "alerting.threshold_hours",
+        for p in ("debt.baseline_need_hours", "debt.window_days", "alerting.tiers",
                   "alerting.consecutive_days", "recipients.tier1", "storage.state_path"):
             _require(self.raw, p)
-        if self.rhr_mode not in {"AND", "OR", "OFF"}:
-            raise ConfigError("alerting.rhr.mode must be one of AND, OR, OFF")
+        if self.rhr_mode not in {"ON", "OFF"}:
+            raise ConfigError("alerting.rhr.mode must be ON or OFF")
         if self.min_observed_days > self.window_days:
             raise ConfigError("debt.min_observed_days cannot exceed debt.window_days")
         if not self.tier1:
             raise ConfigError("recipients.tier1 is empty — nobody would be told")
-        if self.raw.get("_calibrated") is not True:
-            warn.append(
-                "threshold_hours is still the uncalibrated placeholder. Run "
-                "`python -m sleepdebt.calibrate`, set the recommended value, then "
-                "add `_calibrated: true` to config.yaml to silence this.")
         for tier, people in (("tier1", self.tier1), ("tier2", self.tier2)):
             for p in people:
                 if "XXXX" in str(p.get("sms", "")):
