@@ -273,6 +273,24 @@ textarea{resize:vertical;min-height:60px;font-size:14px}
 .meter i{display:block;height:100%;border-radius:999px}
 .meter .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-3);opacity:.65}
 .hero .note{font-size:12.5px;color:var(--ink-2);margin:0}
+.sleepcard{background:linear-gradient(165deg,var(--surface-2),var(--surface) 62%);
+  border:1px solid var(--line);border-radius:var(--r-lg);padding:17px;box-shadow:var(--shadow)}
+.sleepcard .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-3);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sleepcard .big{font-family:var(--mono);font-size:42px;font-weight:600;line-height:1;
+  letter-spacing:-.02em;margin:9px 0 2px;font-variant-numeric:tabular-nums;color:var(--accent)}
+.sleepcard .big small{font-size:15px;color:var(--ink-3);font-weight:400;letter-spacing:0}
+.sleepcard .when{font-size:12.5px;color:var(--ink-2);margin:0 0 14px}
+.oura{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
+.oura div{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-sm);
+  padding:9px 10px}
+.oura .k{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:5px;line-height:1.25}
+.oura .v{font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.oura .v em{font-style:normal;font-size:11px;color:var(--ink-3);font-weight:400}
+.sessrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.sessrow span{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);background:var(--surface);
+  border:1px solid var(--line-soft);border-radius:999px;padding:3px 9px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 .stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:13px}
 .stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
@@ -578,15 +596,15 @@ const CATALOG = [
 
   {id:"lamo",   em:"⚖️",   name:"Lamotrigine",             common:"Lamictal · 1 tab twice daily", dose:"25 mg", unit:"tab", q:1, g:"mind", fx:"Mood stabiliser"},
 
-  {id:"vitstack",em:"🧺",  name:"Full vitamin stack",      common:"D + Ω-3 + 5-HTP + C", dose:"—", unit:"stack", q:1, g:"supp", fx:"Vitamin", dot:"yellow"},
-  {id:"vitd",   em:"☀️",   name:"Cholecalciferol",         common:"Vitamin D3", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · bone", dot:"yellow"},
-  {id:"calcium",em:"🦴",   name:"Calcium + K2",            common:"—", dose:"—", unit:"cap", q:1, g:"supp", fx:"Bone healing", dot:"yellow"},
+  {id:"vitstack",em:"🧺",  name:"Full vitamin stack",      common:"D + Ω-3 + 5-HTP + C", dose:"—", unit:"stack", q:1, g:"supp", fx:"Vitamin", feeds:"yellow"},
+  {id:"vitd",   em:"☀️",   name:"Cholecalciferol",         common:"Vitamin D3", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · bone", feeds:"yellow"},
+  {id:"calcium",em:"🦴",   name:"Calcium + K2",            common:"—", dose:"—", unit:"cap", q:1, g:"supp", fx:"Bone healing", feeds:"yellow"},
   {id:"omega",  em:"🐟",   name:"Omega-3",                 common:"Fish oil", dose:"—", unit:"cap", q:1, g:"supp", fx:"Anti-inflammatory"},
   {id:"htp",    em:"🧘",   name:"5-HTP",                   common:"—", dose:"—", unit:"cap", q:1, g:"supp", fx:"Mood / sleep"},
   {id:"vitc",   em:"🍊",   name:"Ascorbic acid",           common:"Vitamin C", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · collagen"},
   {id:"creat",  em:"💪",   name:"Creatine monohydrate",    common:"—", dose:"10 g", unit:"scoop", q:1, g:"supp", fx:"Muscle retention"},
-  {id:"protein",em:"🥤",   name:"Protein + collagen",      common:"shake", dose:"—", unit:"shake", q:1, g:"supp", fx:"Bone & tissue repair", dot:"yellow"},
-  {id:"protgoal",em:"🍗",  name:"Protein target hit",      common:"~1.6 g/kg for the day", dose:"—", unit:"", q:1, g:"supp", fx:"Fuel", dot:"yellow"},
+  {id:"protein",em:"🥤",   name:"Protein + collagen",      common:"shake", dose:"—", unit:"shake", q:1, g:"supp", fx:"Bone & tissue repair", feeds:"yellow"},
+  {id:"protgoal",em:"🍗",  name:"Protein target hit",      common:"~1.6 g/kg for the day", dose:"—", unit:"", q:1, g:"supp", fx:"Fuel", feeds:"yellow"},
 
   {id:"thc",    em:"🍬",   name:"THC edible",              common:"gummy", dose:"5 mg", unit:"piece", q:1, g:"canna", fx:"Pain / sleep", retired:true},
   {id:"cbn",    em:"🫐",   name:"CBN gummy",               common:"—", dose:"10 mg", unit:"piece", q:1, g:"canna", fx:"Sleep", retired:true},

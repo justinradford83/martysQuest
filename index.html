@@ -273,6 +273,24 @@ textarea{resize:vertical;min-height:60px;font-size:14px}
 .meter i{display:block;height:100%;border-radius:999px}
 .meter .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-3);opacity:.65}
 .hero .note{font-size:12.5px;color:var(--ink-2);margin:0}
+.sleepcard{background:linear-gradient(165deg,var(--surface-2),var(--surface) 62%);
+  border:1px solid var(--line);border-radius:var(--r-lg);padding:17px;box-shadow:var(--shadow)}
+.sleepcard .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-3);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sleepcard .big{font-family:var(--mono);font-size:42px;font-weight:600;line-height:1;
+  letter-spacing:-.02em;margin:9px 0 2px;font-variant-numeric:tabular-nums;color:var(--accent)}
+.sleepcard .big small{font-size:15px;color:var(--ink-3);font-weight:400;letter-spacing:0}
+.sleepcard .when{font-size:12.5px;color:var(--ink-2);margin:0 0 14px}
+.oura{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
+.oura div{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-sm);
+  padding:9px 10px}
+.oura .k{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:5px;line-height:1.25}
+.oura .v{font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.oura .v em{font-style:normal;font-size:11px;color:var(--ink-3);font-weight:400}
+.sessrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.sessrow span{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);background:var(--surface);
+  border:1px solid var(--line-soft);border-radius:999px;padding:3px 9px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 .stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:13px}
 .stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
@@ -576,15 +594,15 @@ const CATALOG = [
 
   {id:"lamo",   em:"⚖️",   name:"Lamotrigine",             common:"Lamictal · 1 tab twice daily", dose:"25 mg", unit:"tab", q:1, g:"mind", fx:"Mood stabiliser"},
 
-  {id:"vitstack",em:"🧺",  name:"Full vitamin stack",      common:"D + Ω-3 + 5-HTP + C", dose:"—", unit:"stack", q:1, g:"supp", fx:"Vitamin", dot:"yellow"},
-  {id:"vitd",   em:"☀️",   name:"Cholecalciferol",         common:"Vitamin D3", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · bone", dot:"yellow"},
-  {id:"calcium",em:"🦴",   name:"Calcium + K2",            common:"—", dose:"—", unit:"cap", q:1, g:"supp", fx:"Bone healing", dot:"yellow"},
+  {id:"vitstack",em:"🧺",  name:"Full vitamin stack",      common:"D + Ω-3 + 5-HTP + C", dose:"—", unit:"stack", q:1, g:"supp", fx:"Vitamin", feeds:"yellow"},
+  {id:"vitd",   em:"☀️",   name:"Cholecalciferol",         common:"Vitamin D3", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · bone", feeds:"yellow"},
+  {id:"calcium",em:"🦴",   name:"Calcium + K2",            common:"—", dose:"—", unit:"cap", q:1, g:"supp", fx:"Bone healing", feeds:"yellow"},
   {id:"omega",  em:"🐟",   name:"Omega-3",                 common:"Fish oil", dose:"—", unit:"cap", q:1, g:"supp", fx:"Anti-inflammatory"},
   {id:"htp",    em:"🧘",   name:"5-HTP",                   common:"—", dose:"—", unit:"cap", q:1, g:"supp", fx:"Mood / sleep"},
   {id:"vitc",   em:"🍊",   name:"Ascorbic acid",           common:"Vitamin C", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · collagen"},
   {id:"creat",  em:"💪",   name:"Creatine monohydrate",    common:"—", dose:"10 g", unit:"scoop", q:1, g:"supp", fx:"Muscle retention"},
-  {id:"protein",em:"🥤",   name:"Protein + collagen",      common:"shake", dose:"—", unit:"shake", q:1, g:"supp", fx:"Bone & tissue repair", dot:"yellow"},
-  {id:"protgoal",em:"🍗",  name:"Protein target hit",      common:"~1.6 g/kg for the day", dose:"—", unit:"", q:1, g:"supp", fx:"Fuel", dot:"yellow"},
+  {id:"protein",em:"🥤",   name:"Protein + collagen",      common:"shake", dose:"—", unit:"shake", q:1, g:"supp", fx:"Bone & tissue repair", feeds:"yellow"},
+  {id:"protgoal",em:"🍗",  name:"Protein target hit",      common:"~1.6 g/kg for the day", dose:"—", unit:"", q:1, g:"supp", fx:"Fuel", feeds:"yellow"},
 
   {id:"thc",    em:"🍬",   name:"THC edible",              common:"gummy", dose:"5 mg", unit:"piece", q:1, g:"canna", fx:"Pain / sleep", retired:true},
   {id:"cbn",    em:"🫐",   name:"CBN gummy",               common:"—", dose:"10 mg", unit:"piece", q:1, g:"canna", fx:"Sleep", retired:true},
@@ -933,6 +951,7 @@ function renderCatalog(){
       '<button class="tile" data-id="'+c.id+'">'+
         '<i class="strip" style="background:'+g.color+'"></i>'+
         (c.dot?'<i class="earns" style="background:'+dotVar(c.dot)+'" title="Earns the '+DOT_BY[c.dot].name+' dot"></i>':'')+
+        (c.feeds?'<i class="earns" style="background:transparent;border:1.5px solid '+dotVar(c.feeds)+'" title="Contributes to the '+DOT_BY[c.feeds].name+' dot, but does not earn it alone"></i>':'')+
         (c.blocks?'<i class="earns" style="background:transparent;border:1.5px solid '+dotVar(c.blocks)+'" title="Breaks the '+DOT_BY[c.blocks].name+' dot"></i>':'')+
         '<span class="em">'+c.em+'</span><span class="nm">'+esc(c.name)+'</span>'+
         (c.common&&c.common!=="—"?'<span class="cm">'+esc(c.common)+'</span>':'')+
@@ -948,6 +967,7 @@ function openEntry(c){
     '<h3>'+c.em+' '+esc(c.name)+'</h3>'+
     '<p class="sh-sub">'+esc(c.common!=="—"?c.common:c.fx)+(c.dose&&c.dose!=="—"?' · '+esc(c.dose):'')+'</p>'+
     (c.dot?'<div class="alert" style="border-color:'+dotVar(c.dot)+';background:transparent;color:'+dotVar(c.dot)+';margin:0 0 14px"><b>Earns a dot</b>'+esc(DOT_BY[c.dot].name)+(c.also?' + '+esc(DOT_BY[c.also].name):'')+' — this will light up on the board.</div>':'')+
+    (c.feeds?'<div class="alert" style="border-color:'+dotVar(c.feeds)+';background:transparent;color:'+dotVar(c.feeds)+';margin:0 0 14px"><b>Contributes to '+esc(DOT_BY[c.feeds].name)+'</b>Not enough on its own. FUEL needs a protein source and calcium or vitamin D on the same day, with no alcohol.</div>':'')+
     (c.blocks?'<div class="alert" style="margin:0 0 14px"><b>Breaks a dot</b>Logging this removes today’s '+esc(DOT_BY[c.blocks].name)+' dot.</div>':'')+
     (c.unit?'<div class="field"><label>Quantity ('+esc(c.unit)+')</label><div class="stepper">'+
       '<button type="button" id="minus">−</button><input type="number" id="q" value="'+c.q+'" min="0">'+
@@ -1201,13 +1221,28 @@ function renderLedger(){
           (c.common&&c.common!=="—"?'<em>'+esc(c.common)+(c.dose&&c.dose!=="—"?' · '+esc(c.dose):'')+'</em>':'')+'</td>'+
         '<td class="e"><span class="pill neutral">'+esc(c.fx||"—")+'</span>'+
           (c.dot?' <span class="pill" style="border-color:'+dotVar(c.dot)+';color:'+dotVar(c.dot)+'">'+DOT_BY[c.dot].name+'</span>':'')+
+          (c.feeds?' <span class="pill" style="border-color:'+dotVar(c.feeds)+';color:var(--ink-3)">→ '+DOT_BY[c.feeds].name+'</span>':'')+
           (mg?'<br><span class="mono" style="font-size:10px;color:var(--ink-3)">'+mg.toLocaleString()+' mg APAP</span>':'')+'</td>'+
         '<td class="no">'+(e.note?esc(e.note):'<span class="muted">—</span>')+'</td>'+
         '<td class="x"><button class="del" data-del="'+e.uid+'" aria-label="Delete entry">✕</button></td></tr>';
     }).join("");
-    const dnote=st.daily.note?'<tr><td class="t muted">—</td><td class="q">—</td>'+
-      '<td class="n">🌙 Sleep report<em>'+(st.daily.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td><td class="e"><span class="pill neutral">Metrics</span></td>'+
-      '<td class="no">'+esc(st.daily.note)+'</td><td class="x"></td></tr>':'';
+    /* The night's total, as its own row, so the ledger records the previous
+       night's sleep and not only the individual sessions. */
+    const d0=st.daily;
+    const bits=[d0.eff!=null?d0.eff+"% efficiency":null,
+                d0.rhr!=null?d0.rhr+" bpm resting":null,
+                d0.deepMin!=null?d0.deepMin+" min deep":null,
+                d0.latency!=null?d0.latency+" min latency":null,
+                d0.score!=null?"score "+d0.score:null].filter(Boolean).join(" · ");
+    const dnote = d0.sleepH!=null
+      ? '<tr><td class="t muted">night</td><td class="q">'+d0.sleepH+' h</td>'+
+        '<td class="n">🌙 Total sleep<em>'+(d0.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td>'+
+        '<td class="e"><span class="pill '+(d0.sleepH<7?"warn":"good")+'">Sleep</span></td>'+
+        '<td class="no">'+esc(bits || d0.note || "—")+'</td><td class="x"></td></tr>'
+      : (d0.note?'<tr><td class="t muted">—</td><td class="q">—</td>'+
+        '<td class="n">🌙 Sleep report<em>'+(d0.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td>'+
+        '<td class="e"><span class="pill neutral">Metrics</span></td>'+
+        '<td class="no">'+esc(d0.note)+'</td><td class="x"></td></tr>':'');
     return '<div class="day"><div class="dayhd"><h3>'+esc(longDate(iso))+'</h3>'+
       '<span class="dow">'+esc(dow(iso))+' · day '+daysBetween(INJURY,iso)+'</span>'+dotsHtml+
       '<span class="sp"></span>'+pills+'</div>'+
@@ -1266,6 +1301,25 @@ function sleepDebt(asOf, windowDays, baseline){
           coverage: observed/windowDays};
 }
 
+/* The most recent night that actually has sleep on it. Oura keys a night to
+   the day you woke, so "last night" is normally today's key — but early in the
+   morning, or after a gap, it is whatever came last. */
+function lastNight(){
+  const days = Object.keys(state.daily).filter(d => state.daily[d] &&
+                state.daily[d].sleepH != null).sort();
+  if(!days.length) return null;
+  const iso = days[days.length-1];
+  const d = state.daily[iso];
+  const sessions = state.entries
+    .filter(e => e.date===iso && (e.id==="sleep_long" || e.id==="sleep_nap"))
+    .sort((a,b) => a.time < b.time ? -1 : 1);
+  return {iso, ...d, sessions};
+}
+function hm(hours){
+  const h = Math.floor(hours), m = Math.round((hours-h)*60);
+  return h+" h "+String(m).padStart(2,"0")+" m";
+}
+
 function lastN(n){ const o=[], t=todayISO(); for(let i=n-1;i>=0;i--) o.push(addDays(t,-i)); return o; }
 function renderDash(){
   const iso=todayISO(), st=dayStats(iso), lim=state.settings.apapLimit;
@@ -1308,7 +1362,36 @@ function renderDash(){
     {k:"Days over ceiling, 14", v:overDays, s:"/ "+apapDays, d:"days above "+lim.toLocaleString()+" mg"}
   ];
 
+  const ln = lastNight();
+  const staleDays = ln ? daysBetween(ln.iso, iso) : null;
+  const sleepCard = !ln
+    ? '<div class="sleepcard"><span class="lbl">Last night\u2019s sleep</span>'+
+      '<div class="big" style="color:var(--ink-3)">\u2014</div>'+
+      '<p class="when">Nothing recorded yet. Log a check-in, or wait for the ring to sync.</p></div>'
+    : '<div class="sleepcard">'+
+        '<span class="lbl">Last night\u2019s sleep'+
+          (ln.src==="oura"?'<span class="pill accent">Oura</span>':'<span class="pill neutral">by hand</span>')+
+          (staleDays>1?'<span class="pill warn">'+staleDays+' days ago</span>':'')+'</span>'+
+        '<div class="big">'+hm(ln.sleepH)+'</div>'+
+        '<p class="when">Night of '+esc(shortDate(addDays(ln.iso,-1)))+' \u2192 '+esc(shortDate(ln.iso))+
+          (ln.sessions.length>1?' \u00b7 '+ln.sessions.length+' sessions':'')+'</p>'+
+        '<div class="oura">'+[
+          ln.eff!=null      ? ['Efficiency', ln.eff+'<em>%</em>'] : null,
+          ln.rhr!=null      ? ['Resting HR', ln.rhr+'<em> bpm</em>'] : null,
+          ln.deepMin!=null  ? ['Deep sleep', ln.deepMin+'<em> min</em>'] : null,
+          ln.latency!=null  ? ['Latency', ln.latency+'<em> min</em>'] : null,
+          ln.score!=null    ? ['Sleep score', String(ln.score)] : null,
+          ['Sleep debt', dbt.observed ? dbt.debt+'<em> h</em>' : '\u2014'],
+        ].filter(Boolean).map(([k,v])=>
+          '<div><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>').join('')+'</div>'+
+        (ln.sessions.length>1
+          ? '<div class="sessrow">'+ln.sessions.map(e=>
+              '<span>'+(BY_ID[e.id]||{}).em+' '+h12(e.time)+' \u00b7 '+hm(e.q)+'</span>').join('')+'</div>'
+          : '')+
+      '</div>';
+
   document.getElementById("dashBody").innerHTML=
+    sleepCard+
     '<div class="hero"><span class="lbl">Acetaminophen today · all sources</span>'+
       '<div class="big" style="color:'+col+'">'+st.apap.toLocaleString()+
         ' <span class="of">/ '+lim.toLocaleString()+' mg</span></div>'+
