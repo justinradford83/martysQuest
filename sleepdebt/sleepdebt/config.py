@@ -53,6 +53,9 @@ class Config:
     @property
     def threshold_hours(self) -> float: return float(_require(self.raw, "alerting.threshold_hours"))
     @property
+    def max_false_alerts_per_year(self) -> float:
+        return float(self.raw["alerting"].get("max_false_alerts_per_year", 4.0))
+    @property
     def consecutive_days(self) -> int: return int(_require(self.raw, "alerting.consecutive_days"))
     @property
     def rhr_mode(self) -> str: return str(_require(self.raw, "alerting.rhr.mode")).upper()

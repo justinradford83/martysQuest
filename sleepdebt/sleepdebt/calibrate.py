@@ -109,14 +109,35 @@ def sweep(series, episodes: Sequence[Tuple[date, str]], *, consecutive: int,
     return rows
 
 
-def recommend(rows: List[dict], episodes_total: int) -> Optional[dict]:
-    """Lowest false-alarm rate among thresholds that catch every episode; among
-    ties, the lowest threshold, since earlier warning is worth more than a
-    marginally tidier alert log."""
-    full = [r for r in rows if r["episodes_caught"] == episodes_total and episodes_total > 0]
+def recommend(rows: List[dict], episodes_total: int,
+              max_fpy: Optional[float] = None) -> Optional[dict]:
+    """Pick a threshold: of those catching every annotated episode, the one
+    giving the most warning while staying inside the false-alarm budget.
+
+    The budget is what makes this defensible. Without it the tie-break runs to
+    whichever end of the sweep it likes — with a single episode that is the
+    bottom of the range, which is a boundary artefact rather than an answer.
+    """
+    full = [r for r in rows if episodes_total > 0
+            and r["episodes_caught"] == episodes_total]
     if not full:
         return None
-    best = min(full, key=lambda r: (r["false_alert_bursts"], r["threshold_hours"]))
+    affordable = ([r for r in full
+                   if max_fpy is None or (r["false_alerts_per_year"] or 0) <= max_fpy]
+                  or [])
+    if not affordable:
+        # Nothing meets the budget. Pick the closest to it that still gives the
+        # most warning, and flag it — the alternative, sorting by threshold,
+        # returns a number that fires the day of the episode and is no use to
+        # anyone. Whether to accept the rate or widen the budget is a judgement
+        # call, so surface it rather than making it silently.
+        best = dict(min(full, key=lambda r: (r["false_alerts_per_year"] or 0,
+                                             -(r["median_warning_days"] or 0))))
+        best["over_budget"] = True
+        return best
+    best = dict(max(affordable, key=lambda r: (r["median_warning_days"] or 0,
+                                               -r["threshold_hours"])))
+    best["over_budget"] = False
     return best
 
 
@@ -175,7 +196,8 @@ def run(cfg, nights: Dict[date, Night], outdir: Path) -> dict:
 
     # Never recommend a threshold fitted to guessed dates — a fitted-looking
     # wrong answer is more dangerous than a visibly missing one.
-    rec = None if unconfirmed else recommend(rows, len(episodes))
+    rec = (None if unconfirmed else
+           recommend(rows, len(episodes), cfg.max_false_alerts_per_year))
 
     # ---- lead-in detail per episode ----
     by_day = {p.day: p for p in series}
@@ -209,7 +231,36 @@ def run(cfg, nights: Dict[date, Night], outdir: Path) -> dict:
                          f"baseline {cfg.baseline_need:g} h")
     (outdir / "sleep_debt.svg").write_text(svg)
 
+    warnings: List[str] = []
+    if len(episodes) == 1:
+        warnings.append(
+            "fitted to a single episode — nothing to cross-validate against, so "
+            "the threshold rests entirely on the false-alarm rate. Provisional; "
+            "re-run if another episode is added.")
+    sw_lo = float(cal.get("sweep", {}).get("min_hours", 4))
+    sw_hi = float(cal.get("sweep", {}).get("max_hours", 30))
+    if rec and abs(rec["threshold_hours"] - sw_lo) < 1e-9:
+        warnings.append(
+            f"the recommendation sits on the floor of the sweep ({sw_lo:g} h) — "
+            f"widen calibration.sweep.min_hours or the true optimum may be below "
+            f"the range that was searched.")
+    if rec and abs(rec["threshold_hours"] - sw_hi) < 1e-9:
+        warnings.append(
+            f"the recommendation sits on the ceiling of the sweep ({sw_hi:g} h) — "
+            f"widen calibration.sweep.max_hours.")
+    if rec and rec.get("over_budget"):
+        warnings.append(
+            f"NO threshold met the {cfg.max_false_alerts_per_year:g}/year "
+            f"false-alarm budget. The value shown is the tidiest available at "
+            f"{rec['false_alerts_per_year']}/year — decide deliberately whether "
+            f"to accept it or raise the budget.")
+    if len(nights) < cfg.window_days * 4:
+        warnings.append(
+            f"only {len(nights)} nights of history — a short record makes the "
+            f"false-alarm rate a weak estimate.")
+
     report = {
+        "warnings": warnings,
         "range": [start.isoformat(), end.isoformat()],
         "nights_with_data": len(nights),
         "calendar_days": (end - start).days + 1,
@@ -261,9 +312,15 @@ def _print_report(r: dict, cfg) -> None:
           f"{rec['episodes_total']} episodes"
           + (f", median {rec['median_warning_days']} days' warning"
              if rec.get("median_warning_days") is not None else "")
-          + f", ~{rec['false_alerts_per_year']} false alerts/year")
+          + f", ~{rec['false_alerts_per_year']} false alerts/year"
+          + (f"  [OVER the {cfg.max_false_alerts_per_year:g}/yr budget]"
+             if rec.get("over_budget") else ""))
         p(f"\n    Set alerting.threshold_hours: {rec['threshold_hours']:g} in config.yaml,")
         p("    then add `_calibrated: true` to confirm you reviewed this.")
+    if r.get("warnings"):
+        p("\n  CAVEATS")
+        for w in r["warnings"]:
+            p(f"    · {w}")
     p(f"\n  files: {r['outputs']['nightly_csv']}")
     p(f"         {r['outputs']['sweep_csv']}")
     p(f"         {r['outputs']['plot_svg']}\n")

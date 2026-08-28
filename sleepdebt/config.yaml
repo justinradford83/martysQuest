@@ -52,17 +52,18 @@ calibration:
   # Every episode needs `confirmed: true` before calibration will recommend a
   # threshold. Fitting to a guessed date produces a fitted-looking wrong answer,
   # which is worse than an obviously missing one.
+  #
+  # Only one episode is in scope, by choice. That means the fit has nothing to
+  # cross-validate against: any threshold low enough to catch this one date
+  # satisfies "catches every episode", so the recommendation rests entirely on
+  # the false-alarm rate. Treat the result as provisional and re-run calibration
+  # if another episode is ever added.
   episodes:
     - label: "acute episode"
-      # Taken from the ledger: mental health assessment at AAC, then urgent
-      # care, 15 Aug 2026. CONFIRM this is the date you mean, then set true.
+      # Confirmed by Justin. Matches the ledger: mental health assessment at
+      # AAC, then urgent care on Hastings, 15 Aug 2026.
       date: "2026-08-15"
-      confirmed: false
-    - label: "hypomanic period"
-      # January 2025 — exact date unknown. The lead-in report covers the 21
-      # days before, so a month is not precise enough.
-      date: null
-      confirmed: false
+      confirmed: true
   lead_in_days: 21
   # Threshold sweep for the recommendation table.
   sweep:
@@ -75,6 +76,14 @@ alerting:
   # PLACEHOLDER. Do not go live on this number — run calibration first and
   # replace it with the value the calibration report recommends.
   threshold_hours: 10.0
+
+  # How many false alerts a year you will tolerate. This is the input that
+  # actually decides the threshold: among thresholds that catch the annotated
+  # episodes, calibration picks the one giving the most warning while staying
+  # inside this budget. Set it honestly — the cost of setting it too high is
+  # that you start ignoring the alerts, which is the failure mode this whole
+  # system exists to avoid.
+  max_false_alerts_per_year: 4.0
 
   # Debt must stay over threshold this many days running before firing.
   # Suppresses single-night noise.

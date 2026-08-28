@@ -90,3 +90,39 @@ def test_late_nap_is_counted_not_dropped():
          {"day": d, "hours": 0.7, "type": "late_nap", "rhr": None}],
         count_types=["long_sleep", "nap"])
     assert n[d].hours == pytest.approx(5.2) and n[d].sessions == 2
+
+
+# ── threshold recommendation ──
+
+def _rows(specs):
+    """specs: (threshold, caught, warning_days, fpy)"""
+    return [{"threshold_hours": t, "episodes_caught": c, "episodes_total": 1,
+             "caught_labels": "a" if c else "", "median_warning_days": w,
+             "false_alert_bursts": int(f), "false_alerts_per_year": f}
+            for t, c, w, f in specs]
+
+
+def test_recommend_needs_every_episode_caught():
+    from sleepdebt.calibrate import recommend
+    assert recommend(_rows([(10, 0, None, 0.0)]), 1, 4.0) is None
+
+
+def test_recommend_maximises_warning_inside_budget():
+    from sleepdebt.calibrate import recommend
+    r = recommend(_rows([(8, 1, 14, 3.0), (12, 1, 5, 1.0)]), 1, 4.0)
+    assert r["threshold_hours"] == 8 and r["over_budget"] is False
+
+
+def test_budget_excludes_noisy_thresholds():
+    from sleepdebt.calibrate import recommend
+    r = recommend(_rows([(8, 1, 14, 9.0), (12, 1, 5, 1.0)]), 1, 4.0)
+    assert r["threshold_hours"] == 12 and r["over_budget"] is False
+
+
+def test_over_budget_still_returns_something_useful():
+    """When nothing meets the budget, return the closest option that still
+    gives warning — not the quietest one that fires on the day."""
+    from sleepdebt.calibrate import recommend
+    r = recommend(_rows([(8, 1, 14, 5.0), (24, 1, 0, 5.0)]), 1, 1.0)
+    assert r["over_budget"] is True
+    assert r["threshold_hours"] == 8 and r["median_warning_days"] == 14
