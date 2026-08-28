@@ -140,6 +140,18 @@ function trend(now,prev){
   return (pc>0?"up ":"down ")+Math.abs(pc)+"% on last week"+(pc<0?" — good":"");
 }
 function lastN(n){ const o=[],t=todayISO(); for(let i=n-1;i>=0;i--) o.push(addDays(t,-i)); return o; }
+/* Most recent night with sleep on it. Oura keys a night to the day you woke. */
+function lastNight(){
+  const days=Object.keys(state.daily).filter(d=>state.daily[d]&&state.daily[d].sleepH!=null).sort();
+  if(!days.length) return null;
+  const iso=days[days.length-1];
+  const sessions=state.entries
+    .filter(e=>e.date===iso&&(e.id==="sleep_long"||e.id==="sleep_nap"))
+    .sort((a,b)=>a.time<b.time?-1:1);
+  return {iso, ...state.daily[iso], sessions};
+}
+function hm(hours){ const h=Math.floor(hours), m=Math.round((hours-h)*60);
+  return h+" h "+String(m).padStart(2,"0")+" m"; }
 const showNotes = () => SHARE.mode!=="family";
 
 /* ════════ MEDICATION SUMMARY — what a clinician opens this for ════════ */
@@ -216,7 +228,35 @@ function renderDash(){
       m.apap.toLocaleString()+' mg APAP</span>':'')+'</td></tr>').join("")
     : '<tr><td colspan="4" class="muted">Nothing logged in the last 7 days.</td></tr>';
 
+  const ln=lastNight();
+  const stale=ln?daysBetween(ln.iso,iso):null;
+  const sleepCard = !ln
+    ? '<div class="sleepcard"><span class="lbl">Last night\u2019s sleep</span>'+
+      '<div class="big" style="color:var(--ink-3)">\u2014</div>'+
+      '<p class="when">No sleep recorded in this snapshot.</p></div>'
+    : '<div class="sleepcard">'+
+        '<span class="lbl">Last night\u2019s sleep'+
+          (ln.src==="oura"?'<span class="pill accent">Oura</span>':'<span class="pill neutral">by hand</span>')+
+          (stale>1?'<span class="pill warn">'+stale+' days before this snapshot</span>':'')+'</span>'+
+        '<div class="big">'+hm(ln.sleepH)+'</div>'+
+        '<p class="when">Night of '+esc(shortDate(addDays(ln.iso,-1)))+' \u2192 '+esc(shortDate(ln.iso))+
+          (ln.sessions.length>1?' \u00b7 '+ln.sessions.length+' sessions':'')+'</p>'+
+        '<div class="oura">'+[
+          ln.eff!=null     ? ['Efficiency', ln.eff+'<em>%</em>'] : null,
+          ln.rhr!=null     ? ['Resting HR', ln.rhr+'<em> bpm</em>'] : null,
+          ln.deepMin!=null ? ['Deep sleep', ln.deepMin+'<em> min</em>'] : null,
+          ln.latency!=null ? ['Latency', ln.latency+'<em> min</em>'] : null,
+          ln.score!=null   ? ['Sleep score', String(ln.score)] : null,
+        ].filter(Boolean).map(([k,v])=>
+          '<div><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>').join('')+'</div>'+
+        (ln.sessions.length>1
+          ? '<div class="sessrow">'+ln.sessions.map(e=>
+              '<span>'+(BY_ID[e.id]||{}).em+' '+h12(e.time)+' \u00b7 '+hm(e.q)+'</span>').join('')+'</div>'
+          : '')+
+      '</div>';
+
   document.getElementById("dashBody").innerHTML=
+    sleepCard+
     '<div class="hero"><span class="lbl">Acetaminophen · all sources · '+
       (isToday?"today":esc(longDate(shown.iso))+" · last day with doses")+'</span>'+
       '<div class="big" style="color:'+col+'">'+shown.apap.toLocaleString()+
@@ -287,9 +327,21 @@ function renderLedger(){
           (mg?'<br><span class="mono" style="font-size:10px;color:var(--ink-3)">'+mg.toLocaleString()+' mg APAP</span>':'')+'</td>'+
         (notes?'<td class="no">'+(e.note?esc(e.note):'<span class="muted">—</span>')+'</td>':'')+'</tr>';
     }).join("");
-    const dnote=(notes&&st.daily.note)?'<tr><td class="t muted">—</td><td class="q">—</td>'+
-      '<td class="n">🌙 Sleep report<em>'+(st.daily.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td><td class="e"><span class="pill neutral">Metrics</span></td>'+
-      '<td class="no">'+esc(st.daily.note)+'</td></tr>':'';
+    const d0=st.daily;
+    const bits=[d0.eff!=null?d0.eff+"% efficiency":null,
+                d0.rhr!=null?d0.rhr+" bpm resting":null,
+                d0.deepMin!=null?d0.deepMin+" min deep":null,
+                d0.latency!=null?d0.latency+" min latency":null,
+                d0.score!=null?"score "+d0.score:null].filter(Boolean).join(" · ");
+    const dnote = d0.sleepH!=null
+      ? '<tr><td class="t muted">night</td><td class="q">'+d0.sleepH+' h</td>'+
+        '<td class="n">🌙 Total sleep<em>'+(d0.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td>'+
+        '<td class="e"><span class="pill '+(d0.sleepH<7?"warn":"good")+'">Sleep</span></td>'+
+        (notes?'<td class="no">'+esc(bits||d0.note||"—")+'</td>':'')+'</tr>'
+      : ((notes&&d0.note)?'<tr><td class="t muted">—</td><td class="q">—</td>'+
+        '<td class="n">🌙 Sleep report<em>'+(d0.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td>'+
+        '<td class="e"><span class="pill neutral">Metrics</span></td>'+
+        '<td class="no">'+esc(d0.note)+'</td></tr>':'');
     return '<div class="day"><div class="dayhd"><h3>'+esc(longDate(iso))+'</h3>'+
       '<span class="dow">'+esc(dow(iso))+' · day '+daysBetween(INJURY,iso)+'</span>'+dotsHtml+
       '<span class="sp"></span>'+pills+'</div>'+
