@@ -96,9 +96,9 @@ Three debt tiers, set in `config.yaml`:
 
 ```yaml
 tiers:
-  - {hours:  6.0, label: "building"}
-  - {hours:  8.0, label: "high"}
-  - {hours: 10.0, label: "severe"}
+  - {hours: 15.0, label: "building"}
+  - {hours: 25.0, label: "high"}
+  - {hours: 35.0, label: "severe"}
 ```
 
 - Debt must sit at or above the lowest tier for `consecutive_days` before
@@ -121,14 +121,20 @@ a 6.5 h baseline over 14 days:
 
 | tier | equivalent average night |
 |---|---|
-| 6 h | 6.07 h |
-| 8 h | 5.93 h |
-| 10 h | 5.79 h |
+| 15 h | 5.43 h |
+| 25 h | 4.71 h |
+| 35 h | 4.00 h |
 
-The whole 6-to-10 ladder spans about **seventeen minutes of average nightly
-sleep**. Anyone averaging under ~5.8 h sits permanently at the top tier, and
-escalation stops carrying information — the cooldown-paced repeat becomes the
-only signal. Run `history` and read `alerts_per_year` before trusting the spacing.
+These sit about **43 minutes of average nightly sleep apart**, which is wide
+enough that the ladder actually discriminates.
+
+The earlier 6/8/10 h tiers did not: they spanned only seventeen minutes
+(6.07 / 5.93 / 5.79 h), so anyone averaging under ~5.8 h pinned to the top tier
+permanently and escalation carried no information.
+
+If you change `baseline_need_hours` or `window_days`, recompute — a tier is
+`(baseline - nightly_average) x window_days`, so both inputs move it. Run
+`history` and read `alerts_per_year` before trusting any spacing.
 
 ### Dead-man's switch
 

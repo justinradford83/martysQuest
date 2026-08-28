@@ -49,12 +49,15 @@ alerting:
   # Debt tiers, in hours. Each is a separate warning level. Crossing UP into a
   # higher tier always alerts, even inside a cooldown — escalation must get
   # through. Re-alerting at the same tier waits for the cooldown.
+  # At a 6.5 h baseline over a 14-day window these correspond to average
+  # nights of 5.43 h, 4.71 h and 4.00 h — roughly 43 minutes apart, so the
+  # ladder actually discriminates across the range being recovered through.
   tiers:
-    - hours: 6.0
+    - hours: 15.0
       label: "building"
-    - hours: 8.0
+    - hours: 25.0
       label: "high"
-    - hours: 10.0
+    - hours: 35.0
       label: "severe"
 
   # Debt must sit at or above the lowest tier this many days running before
