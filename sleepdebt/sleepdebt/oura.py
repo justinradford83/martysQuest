@@ -219,5 +219,28 @@ def _main() -> int:
     return 0
 
 
+def main() -> int:
+    """Entry point. Turns the expected failures into advice rather than a
+    traceback — the actionable line is otherwise buried under a stack."""
+    from . import config
+    try:
+        return _main()
+    except config.ConfigError as exc:
+        print(f"\n{exc}", file=sys.stderr)
+        if "OURA_REFRESH_TOKEN" in str(exc):
+            print("\nMint one first:\n  python -m sleepdebt.authorize", file=sys.stderr)
+        return 1
+    except OuraError as exc:
+        print(f"\nOura: {exc}", file=sys.stderr)
+        return 1
+    except requests.RequestException as exc:
+        print(f"\ncould not reach Oura: {type(exc).__name__}", file=sys.stderr)
+        print("check your network, and any proxy or VPN blocking api.ouraring.com",
+              file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+
+
 if __name__ == "__main__":
-    raise SystemExit(_main())
+    raise SystemExit(main())
