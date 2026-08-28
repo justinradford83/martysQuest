@@ -228,30 +228,46 @@ function renderDash(){
       m.apap.toLocaleString()+' mg APAP</span>':'')+'</td></tr>').join("")
     : '<tr><td colspan="4" class="muted">Nothing logged in the last 7 days.</td></tr>';
 
-  const ln=lastNight();
-  const stale=ln?daysBetween(ln.iso,iso):null;
-  const sleepCard = !ln
-    ? '<div class="sleepcard"><span class="lbl">Last night\u2019s sleep</span>'+
-      '<div class="big" style="color:var(--ink-3)">\u2014</div>'+
-      '<p class="when">No sleep recorded in this snapshot.</p></div>'
-    : '<div class="sleepcard">'+
-        '<span class="lbl">Last night\u2019s sleep'+
+  /* The reader may open this link days after it was made, so the card is
+     honest about the snapshot, not about their clock: "last night" is the
+     night that ended on the snapshot date. An older reading never takes the
+     headline — it is filed underneath where it cannot be misread as current. */
+  const asOf = SHARE.ts || todayISO();
+  const ln = lastNight();
+  const stale = ln ? daysBetween(ln.iso, asOf) : null;
+  const nightOf = i => shortDate(addDays(i,-1))+" → "+shortDate(i);
+  const ouraGrid = r => '<div class="oura">'+[
+      r && r.eff!=null     ? ['Efficiency',  r.eff+'<em>%</em>'] : null,
+      r && r.rhr!=null     ? ['Resting HR',  r.rhr+'<em> bpm</em>'] : null,
+      r && r.deepMin!=null ? ['Deep sleep',  r.deepMin+'<em> min</em>'] : null,
+      r && r.latency!=null ? ['Latency',     r.latency+'<em> min</em>'] : null,
+      r && r.score!=null   ? ['Sleep score', String(r.score)] : null,
+    ].filter(Boolean).map(([k,v])=>
+      '<div><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>').join('')+'</div>';
+  const sleepCard = ln && stale===0
+    ? '<div class="sleepcard">'+
+        '<span class="lbl">Last night’s sleep'+
           (ln.src==="oura"?'<span class="pill accent">Oura</span>':'<span class="pill neutral">by hand</span>')+
-          (stale>1?'<span class="pill warn">'+stale+' days before this snapshot</span>':'')+'</span>'+
+        '</span>'+
         '<div class="big">'+hm(ln.sleepH)+'</div>'+
-        '<p class="when">Night of '+esc(shortDate(addDays(ln.iso,-1)))+' \u2192 '+esc(shortDate(ln.iso))+
-          (ln.sessions.length>1?' \u00b7 '+ln.sessions.length+' sessions':'')+'</p>'+
-        '<div class="oura">'+[
-          ln.eff!=null     ? ['Efficiency', ln.eff+'<em>%</em>'] : null,
-          ln.rhr!=null     ? ['Resting HR', ln.rhr+'<em> bpm</em>'] : null,
-          ln.deepMin!=null ? ['Deep sleep', ln.deepMin+'<em> min</em>'] : null,
-          ln.latency!=null ? ['Latency', ln.latency+'<em> min</em>'] : null,
-          ln.score!=null   ? ['Sleep score', String(ln.score)] : null,
-        ].filter(Boolean).map(([k,v])=>
-          '<div><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>').join('')+'</div>'+
+        '<p class="when">Night of '+esc(nightOf(ln.iso))+
+          (ln.sessions.length>1?' · '+ln.sessions.length+' sessions':'')+'</p>'+
+        ouraGrid(ln)+
         (ln.sessions.length>1
           ? '<div class="sessrow">'+ln.sessions.map(e=>
-              '<span>'+(BY_ID[e.id]||{}).em+' '+h12(e.time)+' \u00b7 '+hm(e.q)+'</span>').join('')+'</div>'
+              '<span>'+(BY_ID[e.id]||{}).em+' '+h12(e.time)+' · '+hm(e.q)+'</span>').join('')+'</div>'
+          : '')+
+      '</div>'
+    : '<div class="sleepcard">'+
+        '<span class="lbl">Last night’s sleep'+
+          (ln?'<span class="pill warn">not recorded</span>':'')+'</span>'+
+        '<div class="big" style="color:var(--ink-3)">—</div>'+
+        '<p class="when">'+(ln
+          ? 'No sleep on the night of '+esc(nightOf(asOf))+', the last night this snapshot covers.'
+          : 'No sleep recorded in this snapshot.')+'</p>'+
+        (ln
+          ? '<p class="stale">Most recent reading was <b>'+hm(ln.sleepH)+'</b> on the night of '+
+            esc(nightOf(ln.iso))+', '+stale+' night'+(stale===1?'':'s')+' before the snapshot.</p>'
           : '')+
       '</div>';
 

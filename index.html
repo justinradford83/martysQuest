@@ -281,6 +281,9 @@ textarea{resize:vertical;min-height:60px;font-size:14px}
   letter-spacing:-.02em;margin:9px 0 2px;font-variant-numeric:tabular-nums;color:var(--accent)}
 .sleepcard .big small{font-size:15px;color:var(--ink-3);font-weight:400;letter-spacing:0}
 .sleepcard .when{font-size:12.5px;color:var(--ink-2);margin:0 0 14px}
+.sleepcard .stale{font-size:11.5px;color:var(--ink-3);margin:13px 0 0;padding-top:11px;
+  border-top:1px solid var(--line-soft);line-height:1.45}
+.sleepcard .stale b{font-weight:600;color:var(--ink-2);font-family:var(--mono);font-variant-numeric:tabular-nums}
 .oura{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
 .oura div{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-sm);
   padding:9px 10px}
@@ -1362,31 +1365,45 @@ function renderDash(){
     {k:"Days over ceiling, 14", v:overDays, s:"/ "+apapDays, d:"days above "+lim.toLocaleString()+" mg"}
   ];
 
+  /* "Last night" is the night that ended this morning — the record keyed to
+     today. Anything older is a gap, not last night, so it never takes the
+     headline: the card says the night is blank and files the older reading
+     underneath, where it cannot be misread as current. */
   const ln = lastNight();
   const staleDays = ln ? daysBetween(ln.iso, iso) : null;
-  const sleepCard = !ln
-    ? '<div class="sleepcard"><span class="lbl">Last night\u2019s sleep</span>'+
-      '<div class="big" style="color:var(--ink-3)">\u2014</div>'+
-      '<p class="when">Nothing recorded yet. Log a check-in, or wait for the ring to sync.</p></div>'
-    : '<div class="sleepcard">'+
-        '<span class="lbl">Last night\u2019s sleep'+
+  const nightOf = i => shortDate(addDays(i,-1))+" → "+shortDate(i);
+  const ouraGrid = r => '<div class="oura">'+[
+      r && r.eff!=null     ? ['Efficiency',  r.eff+'<em>%</em>'] : null,
+      r && r.rhr!=null     ? ['Resting HR',  r.rhr+'<em> bpm</em>'] : null,
+      r && r.deepMin!=null ? ['Deep sleep',  r.deepMin+'<em> min</em>'] : null,
+      r && r.latency!=null ? ['Latency',     r.latency+'<em> min</em>'] : null,
+      r && r.score!=null   ? ['Sleep score', String(r.score)] : null,
+      ['Sleep debt', dbt.observed ? dbt.debt+'<em> h</em>' : '—'],
+    ].filter(Boolean).map(([k,v])=>
+      '<div><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>').join('')+'</div>';
+  const sleepCard = ln && staleDays===0
+    ? '<div class="sleepcard">'+
+        '<span class="lbl">Last night’s sleep'+
           (ln.src==="oura"?'<span class="pill accent">Oura</span>':'<span class="pill neutral">by hand</span>')+
-          (staleDays>1?'<span class="pill warn">'+staleDays+' days ago</span>':'')+'</span>'+
+        '</span>'+
         '<div class="big">'+hm(ln.sleepH)+'</div>'+
-        '<p class="when">Night of '+esc(shortDate(addDays(ln.iso,-1)))+' \u2192 '+esc(shortDate(ln.iso))+
-          (ln.sessions.length>1?' \u00b7 '+ln.sessions.length+' sessions':'')+'</p>'+
-        '<div class="oura">'+[
-          ln.eff!=null      ? ['Efficiency', ln.eff+'<em>%</em>'] : null,
-          ln.rhr!=null      ? ['Resting HR', ln.rhr+'<em> bpm</em>'] : null,
-          ln.deepMin!=null  ? ['Deep sleep', ln.deepMin+'<em> min</em>'] : null,
-          ln.latency!=null  ? ['Latency', ln.latency+'<em> min</em>'] : null,
-          ln.score!=null    ? ['Sleep score', String(ln.score)] : null,
-          ['Sleep debt', dbt.observed ? dbt.debt+'<em> h</em>' : '\u2014'],
-        ].filter(Boolean).map(([k,v])=>
-          '<div><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>').join('')+'</div>'+
+        '<p class="when">Night of '+esc(nightOf(ln.iso))+
+          (ln.sessions.length>1?' · '+ln.sessions.length+' sessions':'')+'</p>'+
+        ouraGrid(ln)+
         (ln.sessions.length>1
           ? '<div class="sessrow">'+ln.sessions.map(e=>
-              '<span>'+(BY_ID[e.id]||{}).em+' '+h12(e.time)+' \u00b7 '+hm(e.q)+'</span>').join('')+'</div>'
+              '<span>'+(BY_ID[e.id]||{}).em+' '+h12(e.time)+' · '+hm(e.q)+'</span>').join('')+'</div>'
+          : '')+
+      '</div>'
+    : '<div class="sleepcard">'+
+        '<span class="lbl">Last night’s sleep<span class="pill warn">not recorded</span></span>'+
+        '<div class="big" style="color:var(--ink-3)">—</div>'+
+        '<p class="when">Night of '+esc(nightOf(iso))+' — nothing has come in yet. '+
+          'Log a check-in, or wait for the ring to sync.</p>'+
+        ouraGrid(null)+
+        (ln
+          ? '<p class="stale">Most recent reading was <b>'+hm(ln.sleepH)+'</b> on the night of '+
+            esc(nightOf(ln.iso))+', '+staleDays+' day'+(staleDays===1?'':'s')+' ago.</p>'
           : '')+
       '</div>';
 
