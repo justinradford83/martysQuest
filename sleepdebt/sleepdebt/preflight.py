@@ -117,10 +117,13 @@ def _live_checks(cfg) -> List[Check]:
     missing = [v for v in ("OURA_CLIENT_ID", "OURA_CLIENT_SECRET", "OURA_REFRESH_TOKEN")
                if not os.environ.get(v)]
     if missing:
+        fix = "export them; never put them in config.yaml"
+        if "OURA_REFRESH_TOKEN" in missing:
+            fix = ("run `python -m sleepdebt.authorize` once to mint the refresh "
+                   "token, then export it" if len(missing) == 1 else fix)
         return [Check("Oura credentials in environment", FAIL,
-                      "missing: " + ", ".join(missing),
-                      "export them; never put them in config.yaml"),
-            Check("Oura field mapping verified", SKIP, "needs credentials")]
+                      "missing: " + ", ".join(missing), fix),
+                Check("Oura field mapping verified", SKIP, "needs credentials")]
 
     out = [Check("Oura credentials in environment", OK, "all three present")]
     try:

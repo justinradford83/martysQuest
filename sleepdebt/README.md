@@ -8,7 +8,9 @@ pip install -r requirements.txt
 
 export OURA_CLIENT_ID=...        # never put these in config.yaml
 export OURA_CLIENT_SECRET=...
-export OURA_REFRESH_TOKEN=...
+
+python -m sleepdebt.authorize            # 0. one-time: mint the refresh token
+export OURA_REFRESH_TOKEN=...            #    from what it prints
 
 python -m sleepdebt.preflight            # what is still blocking go-live
 python -m sleepdebt.oura --verify        # 1. confirm the field mapping
@@ -38,6 +40,26 @@ not for going live.
 unconfirmed. Fitting to a guessed date produces a fitted-*looking* wrong
 answer, which is more dangerous than an obviously missing one — the curve and
 CSVs still come out, only the fit is blocked.
+
+## Authorisation
+
+Oura v2 is OAuth2-only since personal access tokens were retired in December
+2025. `client_id` and `client_secret` alone cannot read your data — an
+authorization-code round trip through a browser is what mints the refresh
+token, and that token is what the job uses.
+
+`python -m sleepdebt.authorize` does that round trip: it opens the consent page,
+catches the redirect on `localhost`, verifies the `state` parameter, exchanges
+the code, and prints the refresh token. Nothing is written to disk.
+
+The `redirect_uri` in config.yaml must be registered **exactly** on your app in
+the Oura developer console first, or Oura refuses the request.
+
+Credentials live in the environment only. If a secret ever reaches a chat
+window, a log, a screenshot, or a commit, treat it as burned and rotate it —
+Oura lets you regenerate the secret without re-registering the app, and the
+refresh token survives a secret rotation only if Oura says it does, so re-run
+`authorize` afterwards if the job starts failing to refresh.
 
 ## The computation
 

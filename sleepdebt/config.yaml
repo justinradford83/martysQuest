@@ -10,6 +10,13 @@ oura:
   #   OURA_CLIENT_ID, OURA_CLIENT_SECRET, OURA_REFRESH_TOKEN
   base_url: "https://api.ouraring.com/v2"
   token_url: "https://api.ouraring.com/oauth/token"
+  # Must be registered EXACTLY on your app in the Oura developer console.
+  # Used only by `python -m sleepdebt.authorize`, the one-time flow that mints
+  # the refresh token.
+  redirect_uri: "http://localhost:8731/callback"
+  # If authorisation fails with invalid_scope, check which scopes are enabled
+  # on the app and match them here.
+  scope: "daily personal"
   # Oura serves roughly two years of history.
   backfill_days: 730
   timeout_seconds: 30
