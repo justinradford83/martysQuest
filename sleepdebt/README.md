@@ -31,14 +31,9 @@ and exits 2:
 - a placeholder Twilio sending number
 
 `--dry-run` always works, and the dead-man's switch is unaffected — it does not
-depend on the threshold, so a half-configured system still tells you when data
-stops arriving. `--force` overrides, and says so loudly; it exists for testing,
-not for going live.
-
-`calibrate` withholds its recommendation entirely if any episode is
-unconfirmed. Fitting to a guessed date produces a fitted-*looking* wrong
-answer, which is more dangerous than an obviously missing one — the curve and
-CSVs still come out, only the fit is blocked.
+depend on the tiers, so a half-configured system still tells you when data stops
+arriving. `--force` overrides, and says so loudly; it exists for testing, not
+for going live.
 
 ## Authorisation
 
