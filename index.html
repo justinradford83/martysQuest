@@ -284,6 +284,7 @@ textarea{resize:vertical;min-height:60px;font-size:14px}
 .sleepcard .stale{font-size:11.5px;color:var(--ink-3);margin:13px 0 0;padding-top:11px;
   border-top:1px solid var(--line-soft);line-height:1.45}
 .sleepcard .stale b{font-weight:600;color:var(--ink-2);font-family:var(--mono);font-variant-numeric:tabular-nums}
+.gnote{font-size:12px;color:var(--ink-3);margin:-6px 0 10px;line-height:1.45;max-width:52ch}
 .oura{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
 .oura div{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-sm);
   padding:9px 10px}
@@ -403,6 +404,113 @@ nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
   .hd h1{font-size:16px}.countdown b{font-size:18px}
   .grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 }
+/* ══════════ DASHBOARD — Oura-app idiom ══════════
+   A scrolling row of ring gauges at the top, then one large focus card that
+   states the day in a word, then the record. Rings are SVG arcs: recessive
+   track, one coloured arc, the number inside, the label beneath. */
+.ringrow{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;
+  margin:0 calc(var(--pad) * -1) 14px;padding:2px var(--pad) 6px;scroll-snap-type:x proximity}
+.ringrow::-webkit-scrollbar{display:none}
+.ringitem{flex:0 0 auto;width:76px;display:flex;flex-direction:column;align-items:center;
+  gap:6px;scroll-snap-align:start;background:none;border:0;padding:0;color:inherit;font:inherit}
+.ringitem .rg{position:relative;width:58px;height:58px}
+.ringitem .rgv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em;color:var(--ink)}
+.ringitem .rgv small{font-size:9px;font-weight:400;color:var(--ink-3);margin-left:1px}
+.ringitem .rgl{font-size:10px;line-height:1.2;color:var(--ink-3);text-align:center;
+  letter-spacing:.01em}
+.ringitem .rgi{font-size:12px;line-height:1;color:var(--ink-3)}
+
+.focus{position:relative;overflow:hidden;border-radius:var(--r-lg);border:1px solid var(--line);
+  box-shadow:var(--shadow);padding:22px 20px 20px;margin-bottom:14px;
+  background:radial-gradient(120% 90% at 50% -20%,var(--accent-soft),transparent 62%),
+    linear-gradient(168deg,var(--surface-2),var(--surface) 70%)}
+.focus.gold{border-color:var(--sand);
+  background:radial-gradient(120% 90% at 50% -20%,var(--sand-soft),transparent 62%),
+    linear-gradient(168deg,var(--surface-2),var(--surface) 70%)}
+.focus .fl{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-3);display:block;text-align:center}
+.focus .arcwrap{position:relative;width:184px;height:114px;margin:12px auto 0}
+.focus .arcv{position:absolute;left:0;right:0;top:34px;text-align:center}
+.focus .arcv b{display:block;font-family:var(--mono);font-size:40px;font-weight:600;line-height:1;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.focus .arcv span{display:block;font-size:12px;color:var(--ink-2);margin-top:4px}
+.focus h3{font-family:var(--serif);font-size:23px;font-weight:600;margin:6px 0 6px;text-align:center}
+.focus p{font-size:13.5px;color:var(--ink-2);margin:0;text-align:center;line-height:1.55}
+.focus .fdots{display:flex;gap:8px;justify-content:center;margin:16px 0 0;flex-wrap:wrap}
+.focus .fd{display:flex;flex-direction:column;align-items:center;gap:5px;
+  min-width:52px;flex:0 0 auto}
+.focus .fd i{width:16px;height:16px;border-radius:50%;border:2px solid currentColor}
+.focus .fd b{font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;color:var(--ink-3);
+  font-weight:500;white-space:nowrap}
+
+.starcard{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  padding:16px;margin-bottom:14px}
+.starcard .sh{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.starcard .sh b{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1;color:var(--sand);
+  font-variant-numeric:tabular-nums}
+.starcard .sh span{font-size:12.5px;color:var(--ink-2)}
+.starcard .sst{display:flex;gap:3px;flex-wrap:wrap}
+.starcard .sst i{width:13px;height:13px;border-radius:3px;background:var(--surface-3);
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--surface);
+  border:1px solid var(--line-soft)}
+.starcard .sst i.d{background:var(--surface-3);border-color:var(--line)}
+.starcard .sst i.g{background:var(--sand);border-color:var(--sand);color:var(--ground)}
+.starcard .sfoot{font-size:11.5px;color:var(--ink-3);margin:11px 0 0;display:flex;gap:14px;flex-wrap:wrap}
+.starcard .sfoot b{font-family:var(--mono);color:var(--ink-2);font-weight:600}
+
+/* ── GOLD STAR CELEBRATION ──
+   Fires once, the moment the last required dot lands. Everything is transform
+   and opacity so it stays on the compositor; prefers-reduced-motion drops the
+   spin and the rays and simply fades the card in. */
+.starburst[hidden]{display:none}
+.starburst{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,12,15,.78);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  animation:sb-in .28s ease both;padding:24px}
+.starburst .sbcard{position:relative;text-align:center;max-width:340px;width:100%;
+  background:linear-gradient(168deg,var(--surface-2),var(--surface) 66%);
+  border:1px solid var(--sand);border-radius:22px;padding:30px 24px 24px;box-shadow:var(--shadow);
+  animation:sb-card .5s cubic-bezier(.2,1.3,.4,1) both}
+.starburst .rays{position:absolute;left:50%;top:74px;width:230px;height:230px;margin:-115px 0 0 -115px;
+  pointer-events:none;z-index:0}
+.starburst .rays i{position:absolute;left:50%;top:50%;width:3px;height:74px;border-radius:2px;
+  background:linear-gradient(to top,transparent,var(--sand));transform-origin:50% 100%;opacity:0;
+  animation:sb-ray .9s ease-out both}
+.starburst .glyph{position:relative;font-size:78px;line-height:1;display:block;
+  filter:drop-shadow(0 6px 16px rgba(240,182,127,.45));
+  animation:sb-pop .72s cubic-bezier(.18,1.5,.4,1) both}
+.starburst .glyph::after{content:"";position:absolute;inset:-8% -30%;border-radius:50%;
+  background:radial-gradient(circle,rgba(240,182,127,.42),transparent 66%);z-index:-1;
+  animation:sb-halo 1.1s ease-out both}
+.starburst .glyph,.starburst h3,.starburst .sbsub,.starburst .sbdots,
+.starburst .sbmeta,.starburst .btnrow{position:relative;z-index:1}
+.starburst h3{font-family:var(--serif);font-size:26px;margin:16px 0 4px;font-weight:600;color:var(--sand)}
+.starburst .sbsub{font-size:13.5px;color:var(--ink-2);margin:0 0 16px;line-height:1.5}
+.starburst .sbdots{display:flex;gap:7px;justify-content:center;margin:0 0 18px}
+.starburst .sbdots i{width:15px;height:15px;border-radius:50%;box-shadow:0 0 0 2px var(--surface);
+  animation:sb-dot .4s ease-out both}
+.starburst .sbmeta{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 18px}
+@keyframes sb-in{from{opacity:0}to{opacity:1}}
+@keyframes sb-card{from{opacity:0;transform:translateY(18px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes sb-pop{0%{opacity:0;transform:scale(.2) rotate(-140deg)}
+  60%{opacity:1;transform:scale(1.18) rotate(8deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes sb-halo{0%{opacity:0;transform:scale(.4)}45%{opacity:1}100%{opacity:.35;transform:scale(1.25)}}
+@keyframes sb-ray{0%{opacity:0;transform:rotate(var(--a)) translateY(-14px) scaleY(.2)}
+  45%{opacity:.85}100%{opacity:0;transform:rotate(var(--a)) translateY(-56px) scaleY(1)}}
+@keyframes sb-dot{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .starburst,.starburst .sbcard,.starburst .glyph,.starburst .sbdots i{animation:sb-in .2s ease both}
+  .starburst .glyph::after{animation:none;opacity:.35}
+  .starburst .rays{display:none}
+}
+/* the star that sits over the dots on a gold-star square */
+.board td.cell.star button .bstar{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;font-size:15px;color:var(--sand);pointer-events:none;
+  text-shadow:0 0 4px var(--ground),0 1px 2px rgba(0,0,0,.6)}
+.board td.cell.star button .dotgrid{opacity:.45}
+
 </style>
 
 <header>
@@ -423,8 +531,9 @@ nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
   <section class="screen on" id="s-log">
     <p class="eyebrow">Capture</p>
     <h2 class="sec">What did you just take?</h2>
-    <p class="sub">Tap a tile to log it. Time defaults to now. Anything that earns a sticker dot is marked
-      with its dot colour in the corner — logging it lights the dot on the board automatically.</p>
+    <p class="sub">Tap a tile to log it. Time defaults to now. A dot in a tile's corner means logging that one
+      thing lights the dot on the board by itself; STRENGTH and REHAB are earned by doing two things from
+      their section, so those tiles are unmarked. The note under each heading says which rule applies.</p>
     <div class="quickrow" id="stacks"></div>
     <div id="catalogGroups"></div>
     <p class="disclaimer">A personal log, not medical advice. Ceilings and phase dates are defaults you can
@@ -463,7 +572,7 @@ nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
   <section class="screen" id="s-plan">
     <p class="eyebrow">The road</p>
     <h2 class="sec">Four phases to Hawaii</h2>
-    <p class="sub">Protect, Build, Load, Power. Tick milestones as you clear them.</p>
+    <p class="sub">Protect, Build, Load, Power — then the water. Revised September 2026: BUILD came early, and everything after it moved with it. Tick milestones as you clear them.</p>
     <div class="stack" id="planBody"></div>
   </section>
 
@@ -480,6 +589,7 @@ nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet"></div>
 <div class="tip" id="tip"></div>
+<div class="starburst" id="starburst" hidden></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -487,40 +597,45 @@ nav.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
 
 /* ════════ CONSTANTS ════════ */
 const INJURY = "2026-08-03";
-const GOAL   = "2027-03-20";          /* 🌊 HAWAII — from the whiteboard doc */
+const GOAL   = "2027-03-15";          /* 🌊 HAWAII — first day of the trip */
 const KEY    = "mq_recovery_v3";
 
 /* ════════ THE FIVE (SIX) DOTS ════════
-   Legend follows Part 1's sticker table. ORANGE = CARDIO is added because
-   Part 3 introduces it from Phase 2 onward. NOTE: Part 3's phase text uses a
-   different colour map (Blue = strength, Purple = sleep) than Part 1's table.
-   Part 1 wins here because that is the sheet you buy. Edit `slot` never —
-   fixed position is what makes the dots readable without relying on colour. */
+   Legend follows Part 1's sticker table. Edit `slot` never — fixed position is
+   what makes the dots readable without relying on colour.
+   The rules below are the Sep 2026 revision: REHAB and STRENGTH are now
+   *counting* rules over their capture sections rather than per-item tags, so
+   no single item can carry a dot on its own (the rings workout excepted). */
 const DOTS = [
   {id:"green", slot:0, letter:"R", name:"REHAB",     v:"--d-green",
-   earns:"Prescribed PT done completely. Abductor / glute med work once cleared.",
-   fallback:"10 ankle pumps + 1 set of quad sets, in bed"},
+   earns:"Any 2 items from the Rehab section.",
+   fallback:"Hip / knee ROM plus a crutch walk — ten minutes total"},
   {id:"blue",  slot:1, letter:"Z", name:"RECOVER",   v:"--d-blue",
-   earns:"7+ hours of sleep, or a real mobility / soft-tissue session.",
-   fallback:"Phone out of the room, lights down 30 min early"},
+   earns:"More than 6 hours of sleep — or a nap of 15 minutes or more.",
+   fallback:"Lie down for fifteen minutes"},
   {id:"yellow",slot:2, letter:"F", name:"FUEL",      v:"--d-yellow",
    earns:"Protein target hit + calcium/D, and no alcohol.",
    fallback:"One protein shake"},
   {id:"red",   slot:3, letter:"S", name:"STRENGTH",  v:"--d-red",
-   earns:"Loaded resistance work — upper body and paddle now, full body later.",
-   fallback:"One set of band pull-aparts"},
+   earns:"Any 2 items from the Fitness section — or the full rings workout on its own.",
+   fallback:"One set of rings push-ups"},
   {id:"purple",slot:4, letter:"P", name:"SPIRITUAL", v:"--d-purple",
-   earns:"Meditation, breathwork or journaling.",
+   earns:"Breathwork, journaling or mental therapy — any one of the three.",
    fallback:"Three minutes of box breathing"},
   {id:"orange",slot:5, letter:"C", name:"CARDIO",    v:"--d-orange",
-   earns:"Circulation first, aerobic base second. Paddling out is a cardiovascular event.",
-   fallback:"Ten easy minutes on the bike"}
+   earns:"Cardio, paddle conditioning or swimming. Required for a gold star from LOAD onward.",
+   fallback:"Ten easy minutes, wheelchair or walking"}
 ];
 const DOT_BY = Object.fromEntries(DOTS.map(d=>[d.id,d]));
 
-/* ════════ FOUR PHASES (from the whiteboard doc) ════════ */
+/* ════════ FIVE PHASES ════════
+   Revised Sep 2026: BUILD was pulled forward to September because the leg was
+   ready before the calendar was. Every downstream phase moved with it.
+   `id` is a storage key — the Plan screen files milestone ticks under
+   `<id>|<milestone text>` — so ids and existing milestone strings never change;
+   new milestones are appended. */
 const PHASES = [
-  {id:"protect", em:"🛡️", name:"PROTECT", from:"2026-08-03", to:"2026-09-30",
+  {id:"protect", em:"🛡️", name:"PROTECT", from:"2026-08-03", to:"2026-08-31",
    live:["green","blue","yellow","purple"],
    job:"Let the nail do the work. Protect the construct, preserve everything you are allowed to preserve, and build the ritual of visiting the board.",
    detail:"Ankle pumps for circulation. Quad sets, glute sets, knee ROM within surgeon limits. From week six, abductor work becomes the priority. Protein around 1.6 g/kg/day, calcium and vitamin D, alcohol policy decided.",
@@ -528,74 +643,89 @@ const PHASES = [
    ms:["Radiographic evidence of early callus","Off feather-touch weight bearing, on surgeon clearance",
        "Six-week gate with Dr. Laughren — Sep 15","Staples removed","Physio referral locked in before Oct 1",
        "Alcohol policy decided","Under 3,000 mg acetaminophen for 7 straight days","Hydromorphone stopped"]},
-  {id:"build", em:"🧱", name:"BUILD", from:"2026-10-01", to:"2026-11-30",
-   live:["green","blue","yellow","red","purple","orange"],
+  {id:"build", em:"🧱", name:"BUILD", from:"2026-09-01", to:"2026-10-31",
+   live:["green","blue","yellow","red","purple"],
    job:"Rebuild the base. Progressive loading, restore normal gait, re-establish paddle fitness.",
-   detail:"Strength enters as the main event: progressive resistance, deliberate abductor strengthening, early single-leg work. Train the right leg hard too — cross-education helps preserve neural drive to the injured side. Rehab shifts from protection to correction: gait retraining, hip stability, killing any Trendelenburg lurch before it becomes permanent.",
-   why:"The plateau lives here. Somewhere in November you will be walking normally, not in pain, and improvement will slow to nearly imperceptible. That is the Plateau of Latent Potential, and it is exactly when abductor rehab gets abandoned. Five or six blank squares in a row in November is not laziness — it is the plateau, and the board is what tells you while there is still time to correct.",
+   detail:"Strength enters as the main event: rings, mace, hangboard, progressive resistance, early single-leg work. Train the right leg hard too — cross-education helps preserve neural drive to the injured side. Rehab shifts from protection to correction: gait retraining, hip stability, killing any Trendelenburg lurch before it becomes permanent. CARDIO can be earned here but is not yet required for a gold star.",
+   why:"The plateau lives here. Somewhere in October you will be walking normally, not in pain, and improvement will slow to nearly imperceptible. That is the Plateau of Latent Potential, and it is exactly when abductor rehab gets abandoned. Five or six blank squares in a row is not laziness — it is the plateau, and the board is what tells you while there is still time to correct.",
    ms:["Unassisted walking","Symmetrical gait, no Trendelenburg lurch","Bodyweight squat to parallel",
-       "Off codeine entirely","Paddle fitness re-started"]},
-  {id:"load", em:"🏋️", name:"LOAD", from:"2026-12-01", to:"2027-01-31",
+       "Off codeine entirely","Paddle fitness re-started",
+       "Walk for 10+ minutes with a cane","Walk one lap around McGill park unassisted",
+       "5 minutes paddling","Basic pop-up complete"]},
+  {id:"load", em:"🏋️", name:"LOAD", from:"2026-11-01", to:"2026-12-31",
    live:["green","blue","yellow","red","purple","orange"],
    job:"Chase symmetry. Close the gap between left and right until the difference is measurable in single digits.",
-   detail:"Heavy-ish bilateral and unilateral loading — squat, hinge, step-up, split squat. Single-leg calf raise volume, single-leg squat quality. Continued dedicated abduction strengthening; this does not graduate out. If a pool or paddle ergometer is available, this is where paddle-specific endurance gets built.",
+   detail:"Heavy-ish bilateral and unilateral loading — squat, hinge, step-up, split squat. Single-leg calf raise volume, single-leg squat quality. Continued dedicated abduction strengthening; this does not graduate out. CARDIO joins the required set from here: paddle endurance and aerobic base are now part of a full day, not a bonus.",
    ms:["Hip abduction strength within 90% of the right leg","Single-leg calf raise × 25",
        "Single-leg squat × 10","Paddle block completed"]},
-  {id:"power", em:"⚡", name:"POWER", from:"2027-02-01", to:"2027-03-20",
+  {id:"power", em:"⚡", name:"POWER", from:"2027-01-01", to:"2027-03-14",
    live:["green","blue","yellow","red","purple","orange"],
    job:"Convert strength into speed, and rehearse the actual movement.",
-   detail:"Hop testing, landing mechanics, deceleration and absorption. Pop-up drills on the floor, then on a board, then in water. Paddle volume ramp, ocean time as conditions and clearance allow. Taper the final ten days — arrive fresh, not cooked.",
+   detail:"Hop testing, landing mechanics, deceleration and absorption. Pop-up drills on the floor, then on a board, then in water. Paddle volume ramp, ocean time as conditions and clearance allow. Snow days are the real-world test of landing and edge control. Taper the final ten days — arrive fresh, not cooked.",
    ms:["Radiographic union confirmed","Single-leg squat × 10","Single-leg calf raise × 25",
-       "Hop testing passed","Hip abduction strength within 90% of right leg","Final ten days tapered"]},
-  {id:"hawaii", em:"🌊", name:"HAWAII", from:"2027-03-20", to:"2027-03-20", goal:true,
+       "Hop testing passed","Hip abduction strength within 90% of right leg","Final ten days tapered",
+       "1 JustKeyTon Snowboard Day","1 Splitboard Day with Greer"]},
+  {id:"hawaii", em:"🌊", name:"HAWAII", from:"2027-03-15", to:"2027-03-25", goal:true,
    live:[], job:"Surfing with your daughter and the rest of the family.",
-   detail:"The whole family in the water. That is what all of the above is for.",
+   detail:"The whole family in the water, March 15–25. That is what all of the above is for.",
    ms:["Paddle out together","Catch a wave with her","Stay out a full session"]}
 ];
 
-/* monthly benchmark tests, from Part 4 */
+/* monthly benchmark tests — keys are storage keys, so they never change */
 const BENCH = {
   "2026-09":"Knee flexion degrees; pain-free standing time",
-  "2026-10":"Knee flexion degrees; pain-free standing time",
-  "2026-11":"Single-leg calf raise reps; walking distance",
-  "2026-12":"Single-leg calf raise reps; walking distance",
-  "2027-01":"Single-leg squat reps; abduction strength L vs R",
-  "2027-02":"Single-leg squat reps; abduction strength L vs R",
+  "2026-10":"Single-leg calf raise reps; walking distance",
+  "2026-11":"Single-leg calf raise reps; abduction strength L vs R",
+  "2026-12":"Single-leg squat reps; abduction strength L vs R",
+  "2027-01":"Single-leg squat reps; hop test distance",
+  "2027-02":"Hop test battery; paddle time trial",
   "2027-03":"Full clearance battery + paddle time trial"
 };
 
 /* ════════ CATALOG ════════ */
 const GROUPS = [
-  {id:"pain",  label:"Pain control",           color:"var(--crit)"},
-  {id:"clot",  label:"Clot & inflammation",    color:"var(--sand)"},
-  {id:"sleep", label:"Sleep",                  color:"var(--accent)"},
-  {id:"mind",  label:"Mental health",          color:"var(--d-purple)"},
-  {id:"supp",  label:"Vitamins & supplements", color:"var(--good)"},
-  {id:"canna", label:"Other substances",       color:"var(--warn)"},
-  {id:"rehab", label:"Rehab & training",       color:"var(--accent)"},
-  {id:"body",  label:"Body & care",            color:"var(--ink-3)"}
+  {id:"mind",  label:"Mental health",           color:"var(--d-purple)"},
+  {id:"pain",  label:"Pain control",            color:"var(--crit)"},
+  {id:"sleep", label:"Sleep",                   color:"var(--accent)"},
+  {id:"supp",  label:"Vitamins & supplements",  color:"var(--good)"},
+  {id:"canna", label:"Other substances",        color:"var(--warn)"},
+  {id:"fit",   label:"Fitness",                 color:"var(--d-red)",
+   note:"Any two of these earns STRENGTH. The full rings workout earns it on its own."},
+  {id:"rehab", label:"Rehab",                   color:"var(--d-green)",
+   note:"Any two of these earns REHAB."},
+  {id:"body",  label:"Body & care",             color:"var(--ink-3)",
+   note:"Sleep over 6 h — or a nap of 15 minutes — earns RECOVER. Breathwork, journalling or mental therapy earns SPIRITUAL."},
+  {id:"care",  label:"Appointments & wound care", color:"var(--sand)"},
+  /* kept so retired anticoagulant entries still colour correctly in the ledger */
+  {id:"clot",  label:"Clot & inflammation",     color:"var(--sand)"}
 ];
-/* `dot` = the sticker this entry contributes to */
+/* Fields:
+     dot     — earns this sticker outright
+     also    — earns a second sticker outright
+     feeds   — contributes to a sticker without earning it alone
+     blocks  — kills that sticker for the day
+     retired — hidden from the capture grid, kept so old ledger rows still read
+   Items in `fit` and `rehab` need no tag: two of either earns its dot. */
 const CATALOG = [
+  {id:"lamo",   em:"⚖️",   name:"Lamotrigine",             common:"Lamictal · 1 tab twice daily", dose:"25 mg", unit:"tab", q:1, g:"mind", fx:"Mood stabiliser"},
+
   {id:"apap",   em:"💊",   name:"Acetaminophen",           common:"Tylenol Extra Strength", dose:"500 mg", unit:"tab", q:2, g:"pain", fx:"Pain relief", mgApap:500},
-  {id:"t3",     em:"💊✳️", name:"Acetaminophen + codeine", common:"Tylenol No. 3", dose:"300 / 30 mg", unit:"tab", q:1, g:"pain", fx:"Pain relief (opioid)", mgApap:300, mgCodeine:30, opioid:true},
-  {id:"hydro",  em:"🛑",   name:"Hydromorphone",           common:"Dilaudid", dose:"per Rx", unit:"dose", q:1, g:"pain", fx:"Severe pain (opioid)", opioid:true},
-  {id:"celeco", em:"🔥",   name:"Celecoxib",               common:"Celebrex · logged “CE”", dose:"per Rx", unit:"cap", q:1, g:"pain", fx:"Anti-inflammatory", retired:true},
   {id:"ibu",    em:"🧯",   name:"Ibuprofen",               common:"Advil", dose:"200 mg", unit:"tab", q:2, g:"pain", fx:"Anti-inflammatory"},
   {id:"naprox", em:"❄️",   name:"Naproxen sodium",         common:"Aleve", dose:"220 mg", unit:"tab", q:1, g:"pain", fx:"Anti-inflammatory"},
+  {id:"t3",     em:"💊✳️", name:"Acetaminophen + codeine", common:"Tylenol No. 3", dose:"300 / 30 mg", unit:"tab", q:1, g:"pain", fx:"Pain relief (opioid)", mgApap:300, mgCodeine:30, opioid:true, retired:true},
+  {id:"hydro",  em:"🛑",   name:"Hydromorphone",           common:"Dilaudid", dose:"per Rx", unit:"dose", q:1, g:"pain", fx:"Severe pain (opioid)", opioid:true, retired:true},
+  {id:"celeco", em:"🔥",   name:"Celecoxib",               common:"Celebrex · logged “CE”", dose:"per Rx", unit:"cap", q:1, g:"pain", fx:"Anti-inflammatory", retired:true},
 
-  {id:"asa",    em:"🩸",   name:"Acetylsalicylic acid",    common:"ASA · “blood thinner”", dose:"81–325 mg", unit:"tab", q:1, g:"clot", fx:"Blood thinner"},
-  {id:"lmwh",   em:"💉",   name:"Enoxaparin",              common:"Lovenox injection", dose:"per Rx", unit:"inj", q:1, g:"clot", fx:"Blood thinner"},
+  {id:"asa",    em:"🩸",   name:"Acetylsalicylic acid",    common:"ASA · “blood thinner”", dose:"81–325 mg", unit:"tab", q:1, g:"clot", fx:"Blood thinner", retired:true},
+  {id:"lmwh",   em:"💉",   name:"Enoxaparin",              common:"Lovenox injection", dose:"per Rx", unit:"inj", q:1, g:"clot", fx:"Blood thinner", retired:true},
 
   {id:"quet100",em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"100 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health"},
-  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"25 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health", retired:true},
-  {id:"gravol", em:"😵‍💫",  name:"Dimenhydrinate",          common:"Gravol", dose:"50 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep aid / nausea"},
-  {id:"sleepez",em:"💤",   name:"Dimenhydrinate gel",      common:"Sleep-EZ", dose:"25 mg", unit:"gel", q:1, g:"sleep", fx:"Sleep aid"},
   {id:"melat",  em:"🌛",   name:"Melatonin",               common:"gummy", dose:"5 mg", unit:"gummy", q:1, g:"sleep", fx:"Sleep onset"},
   {id:"mag",    em:"🧲",   name:"Magnesium",               common:"bisglycinate", dose:"—", unit:"cap", q:2, g:"sleep", fx:"Sleep / muscle relax"},
-  {id:"winddown",em:"🕯️", name:"Wind-down routine",       common:"phone out, lights down", dose:"—", unit:"", q:1, g:"sleep", fx:"Sleep hygiene", dot:"blue"},
-
-  {id:"lamo",   em:"⚖️",   name:"Lamotrigine",             common:"Lamictal · 1 tab twice daily", dose:"25 mg", unit:"tab", q:1, g:"mind", fx:"Mood stabiliser"},
+  {id:"winddown",em:"🕯️", name:"Wind-down routine",       common:"phone out, lights down", dose:"—", unit:"", q:1, g:"sleep", fx:"Sleep hygiene"},
+  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"25 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health", retired:true},
+  {id:"gravol", em:"😵‍💫",  name:"Dimenhydrinate",          common:"Gravol", dose:"50 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep aid / nausea", retired:true},
+  {id:"sleepez",em:"💤",   name:"Dimenhydrinate gel",      common:"Sleep-EZ", dose:"25 mg", unit:"gel", q:1, g:"sleep", fx:"Sleep aid", retired:true},
 
   {id:"vitstack",em:"🧺",  name:"Full vitamin stack",      common:"D + Ω-3 + 5-HTP + C", dose:"—", unit:"stack", q:1, g:"supp", fx:"Vitamin", feeds:"yellow"},
   {id:"vitd",   em:"☀️",   name:"Cholecalciferol",         common:"Vitamin D3", dose:"—", unit:"cap", q:1, g:"supp", fx:"Vitamin · bone", feeds:"yellow"},
@@ -607,52 +737,67 @@ const CATALOG = [
   {id:"protein",em:"🥤",   name:"Protein + collagen",      common:"shake", dose:"—", unit:"shake", q:1, g:"supp", fx:"Bone & tissue repair", feeds:"yellow"},
   {id:"protgoal",em:"🍗",  name:"Protein target hit",      common:"~1.6 g/kg for the day", dose:"—", unit:"", q:1, g:"supp", fx:"Fuel", feeds:"yellow"},
 
+  {id:"caff",   em:"⚡",   name:"Caffeine",                common:"coffee / energy drink", dose:"—", unit:"serving", q:1, g:"canna", fx:"Stimulant"},
+  {id:"alcohol",em:"🍺",   name:"Alcohol",                 common:"breaks the FUEL dot", dose:"—", unit:"drink", q:1, g:"canna", fx:"Depressant", blocks:"yellow"},
   {id:"thc",    em:"🍬",   name:"THC edible",              common:"gummy", dose:"5 mg", unit:"piece", q:1, g:"canna", fx:"Pain / sleep", retired:true},
   {id:"cbn",    em:"🫐",   name:"CBN gummy",               common:"—", dose:"10 mg", unit:"piece", q:1, g:"canna", fx:"Sleep", retired:true},
   {id:"flower", em:"🌿",   name:"Cannabis flower",         common:"indica", dose:"0.35 g", unit:"g", q:0.35, g:"canna", fx:"Pain / relaxation", retired:true},
   {id:"preroll",em:"🚬",   name:"Pre-roll",                common:"sativa", dose:"—", unit:"roll", q:1, g:"canna", fx:"Pain / mood", retired:true},
-  {id:"caff",   em:"⚡",   name:"Caffeine",                common:"coffee / energy drink", dose:"—", unit:"serving", q:1, g:"canna", fx:"Stimulant"},
-  {id:"alcohol",em:"🍺",   name:"Alcohol",                 common:"breaks the FUEL dot", dose:"—", unit:"drink", q:1, g:"canna", fx:"Depressant", blocks:"yellow"},
 
-  {id:"ankle",  em:"🦶",   name:"Ankle pumps / quad sets", common:"the two-minute fallback", dose:"—", unit:"set", q:3, g:"rehab", fx:"Circulation & activation", dot:"green"},
-  {id:"abduct", em:"🦿",   name:"Hip abduction / glute med",common:"the make-or-break tissue", dose:"—", unit:"set", q:3, g:"rehab", fx:"Abductor rehab", dot:"green"},
-  {id:"physio", em:"🧑‍⚕️", name:"Physiotherapy",           common:"session", dose:"—", unit:"session", q:1, g:"rehab", fx:"Rehab", dot:"green"},
-  {id:"mobil",  em:"🤸",   name:"Mobility & soft tissue",  common:"hip / knee ROM", dose:"—", unit:"min", q:15, g:"rehab", fx:"Range of motion", dot:"green", also:"blue"},
-  {id:"gait",   em:"👣",   name:"Gait retraining",         common:"—", dose:"—", unit:"min", q:10, g:"rehab", fx:"Gait & hip stability", dot:"green"},
-  {id:"resist", em:"🏋️",  name:"Resistance training",     common:"loaded work", dose:"—", unit:"min", q:30, g:"rehab", fx:"Strength", dot:"red"},
-  {id:"upper",  em:"💪",   name:"Upper-body calisthenics", common:"—", dose:"—", unit:"min", q:30, g:"rehab", fx:"Strength", dot:"red"},
-  {id:"bands",  em:"🎗️",  name:"Band pull-aparts",        common:"the two-minute fallback", dose:"—", unit:"set", q:1, g:"rehab", fx:"Strength", dot:"red"},
-  {id:"singleleg",em:"🦵", name:"Single-leg work",         common:"squat · calf raise · step-up", dose:"—", unit:"set", q:3, g:"rehab", fx:"Symmetry", dot:"red"},
-  {id:"bike",   em:"🚴",   name:"Stationary bike",         common:"—", dose:"—", unit:"min", q:20, g:"rehab", fx:"Cardio & ROM", dot:"orange"},
-  {id:"pool",   em:"🏊",   name:"Pool / swim",             common:"—", dose:"—", unit:"min", q:30, g:"rehab", fx:"Cardio · unloaded", dot:"orange"},
-  {id:"paddle", em:"🛶",   name:"Paddle conditioning",     common:"—", dose:"—", unit:"min", q:20, g:"rehab", fx:"Surf-specific cardio", dot:"orange"},
-  {id:"crutch", em:"🩼",   name:"Crutch walk",             common:"non-weight-bearing", dose:"—", unit:"min", q:10, g:"rehab", fx:"Mobility", dot:"green"},
-  {id:"wbwalk", em:"🚶",   name:"Weight-bearing walk",     common:"as cleared", dose:"—", unit:"min", q:15, g:"rehab", fx:"Gait & loading", dot:"green", also:"orange"},
-  {id:"hop",    em:"🦘",   name:"Hop & landing drills",    common:"—", dose:"—", unit:"set", q:3, g:"rehab", fx:"Power", dot:"red"},
-  {id:"popup",  em:"🏄",   name:"Surf pop-up drill",       common:"floor → board → water", dose:"—", unit:"reps", q:10, g:"rehab", fx:"Surf-specific", dot:"red"},
-  {id:"balance",em:"🛹",   name:"Balance / board work",    common:"—", dose:"—", unit:"min", q:10, g:"rehab", fx:"Proprioception", dot:"green"},
+  /* ── FITNESS — any two earns STRENGTH; the rings workout earns it alone ── */
+  {id:"rings",  em:"⭕",   name:"Full rings workout",      common:"3× push · 3× dip · 3× row", dose:"—", unit:"round", q:3, g:"fit", fx:"Strength", dot:"red"},
+  {id:"mace",   em:"🔨",   name:"Mace workout",            common:"—", dose:"—", unit:"min", q:15, g:"fit", fx:"Strength & rotation"},
+  {id:"paddle", em:"🛶",   name:"Paddle conditioning",     common:"—", dose:"—", unit:"min", q:20, g:"fit", fx:"Surf-specific cardio", also:"orange"},
+  {id:"hang",   em:"🧗",   name:"Hangboard training",      common:"—", dose:"—", unit:"min", q:10, g:"fit", fx:"Grip & upper body"},
+  {id:"popup",  em:"🏄",   name:"Surf pop-up training",    common:"floor → board → water", dose:"—", unit:"reps", q:10, g:"fit", fx:"Surf-specific"},
+  {id:"cardio", em:"🫀",   name:"Cardio",                  common:"wheelchair · walking · bike", dose:"—", unit:"min", q:20, g:"fit", fx:"Aerobic base", also:"orange"},
 
+  /* ── REHAB — any two earns REHAB ── */
+  {id:"physio", em:"🧑‍⚕️", name:"Physiotherapy",           common:"session", dose:"—", unit:"session", q:1, g:"rehab", fx:"Rehab"},
+  {id:"mobil",  em:"🤸",   name:"Hip / knee ROM",          common:"range of motion work", dose:"—", unit:"min", q:15, g:"rehab", fx:"Range of motion"},
+  {id:"gait",   em:"👣",   name:"Gait training",           common:"—", dose:"—", unit:"min", q:10, g:"rehab", fx:"Gait & hip stability"},
+  {id:"pool",   em:"🏊",   name:"Swimming",                common:"—", dose:"—", unit:"min", q:30, g:"rehab", fx:"Unloaded conditioning", also:"orange"},
+  {id:"wbwalk", em:"🚶",   name:"Weight-bearing walk",     common:"as cleared", dose:"—", unit:"min", q:15, g:"rehab", fx:"Gait & loading"},
+  {id:"crutch", em:"🩼",   name:"Crutch walking",          common:"—", dose:"—", unit:"min", q:10, g:"rehab", fx:"Mobility"},
+  {id:"balance",em:"🛹",   name:"Balance board",           common:"—", dose:"—", unit:"min", q:10, g:"rehab", fx:"Proprioception"},
+  {id:"ankle",  em:"🦶",   name:"Ankle pumps / quad sets", common:"—", dose:"—", unit:"set", q:3, g:"rehab", fx:"Circulation & activation", retired:true},
+  {id:"abduct", em:"🦿",   name:"Hip abduction / glute med",common:"—", dose:"—", unit:"set", q:3, g:"rehab", fx:"Abductor rehab", retired:true},
+  {id:"resist", em:"🏋️",  name:"Resistance training",     common:"loaded work", dose:"—", unit:"min", q:30, g:"rehab", fx:"Strength", retired:true},
+  {id:"upper",  em:"💪",   name:"Upper-body calisthenics", common:"—", dose:"—", unit:"min", q:30, g:"rehab", fx:"Strength", retired:true},
+  {id:"bands",  em:"🎗️",  name:"Band pull-aparts",        common:"—", dose:"—", unit:"set", q:1, g:"rehab", fx:"Strength", retired:true},
+  {id:"singleleg",em:"🦵", name:"Single-leg work",         common:"squat · calf raise · step-up", dose:"—", unit:"set", q:3, g:"rehab", fx:"Symmetry", retired:true},
+  {id:"hop",    em:"🦘",   name:"Hop & landing drills",    common:"—", dose:"—", unit:"set", q:3, g:"rehab", fx:"Power", retired:true},
+  {id:"bike",   em:"🚴",   name:"Stationary bike",         common:"—", dose:"—", unit:"min", q:20, g:"rehab", fx:"Cardio & ROM", retired:true},
+
+  /* ── BODY & CARE ── */
   {id:"checkin",em:"📈",   name:"Daily check-in",          common:"sleep · pain · mood", dose:"—", unit:"", q:1, g:"body", fx:"Metrics", checkin:true},
-  {id:"breath", em:"🧘‍♂️", name:"Breathwork / meditation", common:"—", dose:"—", unit:"min", q:10, g:"body", fx:"Nervous system", dot:"purple"},
-  {id:"journal",em:"📓",   name:"Journaling",              common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Spiritual", dot:"purple"},
+  {id:"breath", em:"🧘‍♂️", name:"Breathwork",              common:"meditation · box breathing", dose:"—", unit:"min", q:10, g:"body", fx:"Nervous system", dot:"purple"},
+  {id:"journal",em:"📓",   name:"Journalling",             common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Spiritual", dot:"purple"},
   {id:"mtherapy",em:"🗣️",  name:"Mental therapy",          common:"counselling · psychiatry", dose:"—", unit:"", q:1, g:"body", fx:"Mental health", dot:"purple"},
-  {id:"wound",  em:"🩹",   name:"Wound & staple care",     common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Wound care"},
-  {id:"appt",   em:"🏥",   name:"Medical appointment",     common:"PT · Dr. Laughren · x-ray", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
-  {id:"xray",   em:"🩻",   name:"X-ray / imaging",         common:"union check", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
-  {id:"equip",  em:"🎓",   name:"Equipment graduation",    common:"walker → crutches → cane → none", dose:"—", unit:"", q:1, g:"body", fx:"Milestone", milestone:true},
-  {id:"shower", em:"🚿",   name:"Shower / self-care",      common:"—", dose:"—", unit:"", q:1, g:"body", fx:"Independence"},
-  {id:"nap",    em:"🛌",   name:"Nap",                     common:"—", dose:"—", unit:"min", q:45, g:"body", fx:"Sleep debt"},
-  {id:"sleep_long",em:"😴", name:"Sleep",                   common:"Oura ring", dose:"—", unit:"h", q:0, g:"body", fx:"Sleep", retired:true},
-  {id:"sleep_nap", em:"🌥️", name:"Nap",                     common:"Oura ring", dose:"—", unit:"h", q:0, g:"body", fx:"Sleep", retired:true},
-  {id:"note",   em:"📝",   name:"Journal note",            common:"free text", dose:"—", unit:"", q:1, g:"body", fx:"Note"}
+  {id:"nap",    em:"🛌",   name:"Napping",                 common:"15-minute increments", dose:"—", unit:"min", q:15, g:"body", fx:"Sleep debt", step:15},
+  {id:"sleep",  em:"😴",   name:"Sleep",                   common:"total hours last night", dose:"—", unit:"h", q:6, g:"body", fx:"Sleep", step:0.5, sleepTotal:true},
+
+  /* ── APPOINTMENTS & WOUND CARE ── */
+  {id:"appt",   em:"🏥",   name:"Medical appointment",     common:"PT · Dr. Laughren · x-ray", dose:"—", unit:"", q:1, g:"care", fx:"Milestone", milestone:true},
+  {id:"xray",   em:"🩻",   name:"X-ray / imaging",         common:"union check", dose:"—", unit:"", q:1, g:"care", fx:"Milestone", milestone:true},
+  {id:"equip",  em:"🎓",   name:"Equipment graduation",    common:"walker → crutches → cane → none", dose:"—", unit:"", q:1, g:"care", fx:"Milestone", milestone:true},
+  {id:"wound",  em:"🩹",   name:"Wound & scar care",       common:"—", dose:"—", unit:"", q:1, g:"care", fx:"Wound care"},
+  {id:"shower", em:"🚿",   name:"Shower / self-care",      common:"—", dose:"—", unit:"", q:1, g:"care", fx:"Independence"},
+  {id:"note",   em:"📝",   name:"Journal note",            common:"free text", dose:"—", unit:"", q:1, g:"care", fx:"Note"},
+
+  /* legacy Oura rows — the ring integration is gone, these keep old logs readable */
+  {id:"sleep_long",em:"😴", name:"Sleep",                  common:"Oura ring", dose:"—", unit:"h", q:0, g:"body", fx:"Sleep", retired:true},
+  {id:"sleep_nap", em:"🌥️", name:"Nap",                    common:"Oura ring", dose:"—", unit:"h", q:0, g:"body", fx:"Sleep", retired:true}
 ];
 const BY_ID = Object.fromEntries(CATALOG.map(c=>[c.id,c]));
+const FIT_IDS   = new Set(CATALOG.filter(c=>c.g==="fit").map(c=>c.id));
+const REHAB_IDS = new Set(CATALOG.filter(c=>c.g==="rehab").map(c=>c.id));
 
 const STACKS = [
-  {id:"morn", em:"🌅", label:"Morning stack", items:[["apap",2],["asa",1],["lamo",1],["vitstack",1]]},
-  {id:"aft",  em:"🌤", label:"Afternoon",     items:[["apap",2],["asa",1],["vitstack",1]]},
+  {id:"morn", em:"🌅", label:"Morning stack", items:[["apap",2],["lamo",1],["vitstack",1]]},
+  {id:"aft",  em:"🌤", label:"Afternoon",     items:[["apap",2],["vitstack",1]]},
   {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",1],["lamo",1],["mag",2],["melat",1]]},
-  {id:"fall", em:"⏱️", label:"Two-minute fallback", items:[["ankle",1],["bands",1],["breath",3]]},
+  {id:"fall", em:"⏱️", label:"Two-minute fallback", items:[["mobil",5],["breath",3]]},
   {id:"brk",  em:"⚡", label:"Breakthrough",  items:[["apap",2]]}
 ];
 
@@ -735,6 +880,16 @@ const SEED_DAILY = {
 };
 
 /* ════════ STATE ════════ */
+/* Renamed checklist items, old text → new. `done` is keyed by the text itself,
+   so a rename would otherwise silently untick something already finished. */
+const DONE_RENAMES = {
+  "setup|Draw phase boundary lines at G5, G9, G13":
+    "setup|Draw phase boundary lines at Sep 1, Nov 1 and Jan 1",
+  "setup|Write phase names in the A–F cells of Aug, Oct, Dec, Feb":
+    "setup|Write phase names above Aug, Sep, Nov and Jan",
+  "setup|Mark the Hawaii square in March":
+    "setup|Mark the Hawaii squares, March 15–25"
+};
 let LOAD_ERROR = null;   /* raw bytes we could not parse, if any */
 let state = load();
 function load(){
@@ -752,6 +907,9 @@ function load(){
 }
 function migrate(o){
   o.entries ||= []; o.daily ||= {}; o.done ||= {}; o.board ||= {}; o.bench ||= {};
+  Object.entries(DONE_RENAMES).forEach(([from,to])=>{
+    if(o.done[from]){ o.done[to]=true; delete o.done[from]; }
+  });
   o.settings ||= {apapTab:500, apapLimit:4000, theme:null};
   o.settings.timeUnit ||= "days";
   o.settings.baselineNeed ??= 6.5;   /* keep in step with sleepdebt/config.yaml */
@@ -848,7 +1006,7 @@ function dayStats(iso){
   rows.forEach(e=>{ const c=BY_ID[e.id]; if(!c) return;
     apap+=apapMg(e);
     if(c.opioid){ opioid+=e.q; if(c.mgCodeine) codeine+=c.mgCodeine*e.q; }
-    if(c.g==="rehab") rehabN++;
+    if(c.g==="rehab"||c.g==="fit") rehabN++;
   });
   const d = state.daily[iso]||{};
   return {iso, rows, apap, opioid, codeine, rehabN, sleepH:d.sleepH, daily:d};
@@ -865,18 +1023,126 @@ function autoDots(iso){
   const out = {};
   st.rows.forEach(e=>{
     const c = BY_ID[e.id]; if(!c) return;
-    if(c.dot) out[c.dot]=true;
+    if(c.dot)  out[c.dot]=true;
     if(c.also) out[c.also]=true;
   });
-  /* RECOVER also earned by 7+ hours of sleep */
-  if(st.sleepH != null && st.sleepH >= 7) out.blue = true;
-  /* FUEL needs protein AND calcium/D AND no alcohol */
+  /* REHAB and STRENGTH are counting rules over their capture sections: two
+     DISTINCT items in a section earns its dot. Logging the same thing twice
+     is not two items. The rings workout is the single exception — it carries
+     STRENGTH on its own through the `dot` tag above. */
+  const count = set => [...ids].filter(x=>set.has(x)).length;
+  if(count(REHAB_IDS) >= 2) out.green = true;
+  if(count(FIT_IDS)   >= 2) out.red   = true;
+  /* RECOVER: more than 6 h of sleep, or a nap of 15 minutes or more. */
+  const napMin = st.rows.filter(e=>e.id==="nap").reduce((a,e)=>a+e.q,0);
+  if((st.sleepH != null && st.sleepH > 6) || napMin >= 15) out.blue = true;
+  /* FUEL needs a protein source AND calcium/D on the same day */
   const protein = ids.has("protein")||ids.has("protgoal");
   const mineral = ids.has("calcium")||ids.has("vitd")||ids.has("vitstack");
   out.yellow = protein && mineral;
   /* anything flagged `blocks` kills its dot for the day */
   st.rows.forEach(e=>{ const c=BY_ID[e.id]; if(c && c.blocks) out[c.blocks]=false; });
   return out;
+}
+/* ── HISTORY FREEZE ──
+   The dot rules changed on the day this version shipped. Re-deriving old days
+   under new rules would silently rewrite a record he has been keeping by hand
+   since August, so it does not happen: every day before today that carries any
+   data has its dots — as they read under the OLD rules — written into
+   state.board as explicit manual values. From then on the past is a stored
+   fact, and only today forward is derived. Runs exactly once. */
+const LEGACY_DOT = {
+  winddown:["blue"], ankle:["green"], abduct:["green"], physio:["green"],
+  mobil:["green","blue"], gait:["green"], resist:["red"], upper:["red"],
+  bands:["red"], singleleg:["red"], bike:["orange"], pool:["orange"],
+  paddle:["orange"], crutch:["green"], wbwalk:["green","orange"], hop:["red"],
+  popup:["red"], balance:["green"], breath:["purple"], journal:["purple"],
+  mtherapy:["purple"], alcohol:[]
+};
+function legacyAutoDots(iso){
+  const st = dayStats(iso);
+  const ids = new Set(st.rows.map(e=>e.id));
+  const out = {};
+  ids.forEach(id => (LEGACY_DOT[id]||[]).forEach(d => out[d]=true));
+  if(st.sleepH != null && st.sleepH >= 7) out.blue = true;
+  const protein = ids.has("protein")||ids.has("protgoal");
+  const mineral = ids.has("calcium")||ids.has("vitd")||ids.has("vitstack");
+  out.yellow = protein && mineral;
+  if(ids.has("alcohol")) out.yellow = false;
+  return out;
+}
+function freezeHistory(){
+  if(state.settings.dotRulesV2) return;
+  const today = todayISO();
+  const days = new Set([...state.entries.map(e=>e.date),
+                        ...Object.keys(state.daily), ...Object.keys(state.board)]);
+  let frozen = 0;
+  [...days].filter(d => d < today).forEach(iso => {
+    const auto = legacyAutoDots(iso);
+    const man  = (state.board[iso] && state.board[iso].dots) || {};
+    const dots = {};
+    DOTS.forEach(d => { dots[d.id] = (d.id in man) ? !!man[d.id] : !!auto[d.id]; });
+    state.board[iso] = Object.assign({}, state.board[iso], {dots, starShown:true});
+    frozen++;
+  });
+  state.settings.dotRulesV2 = true;
+  save();
+  return frozen;
+}
+/* ── THE GOLD STAR MOMENT ──
+   Fires once per day, at the instant the last required dot lands. `starShown`
+   is stored on the day so a reload, or a dot toggled off and back on, does not
+   replay it. Any log that could complete a day calls this. */
+function celebrateIfStar(iso){
+  if(!iso) return;
+  const meta = dayMeta(iso);
+  if(!meta.star) return;
+  const b = state.board[iso] = state.board[iso] || {};
+  if(b.starShown) return;
+  b.starShown = true; save();
+  showStar(iso, meta);
+}
+function showStar(iso, meta){
+  const host = document.getElementById("starburst");
+  const rays = Array.from({length:12},(_,i)=>
+    '<i style="--a:'+(i*30)+'deg;animation-delay:'+(120+i*22)+'ms"></i>').join("");
+  const dots = meta.earned.map((id,i)=>'<i style="background:'+dotVar(id)+
+    ';animation-delay:'+(420+i*70)+'ms"></i>').join("");
+  const stars = starCount();
+  host.innerHTML =
+    '<div class="sbcard" role="dialog" aria-live="polite" aria-label="Gold star earned">'+
+      '<div class="rays">'+rays+'</div>'+
+      '<span class="glyph">⭐</span>'+
+      '<h3>Gold star</h3>'+
+      '<p class="sbsub">Every dot this phase requires, earned on '+esc(longDate(iso))+
+        '. Put a star on the square.</p>'+
+      '<div class="sbdots">'+dots+'</div>'+
+      '<p class="sbmeta">'+stars.total+' gold star'+(stars.total===1?"":"s")+
+        ' · '+stars.streak+'-day star streak</p>'+
+      '<div class="btnrow"><button class="btn" id="sbok">Nice</button></div>'+
+    '</div>';
+  host.hidden = false;
+  const close = ()=>{ host.hidden = true; host.innerHTML=""; };
+  document.getElementById("sbok").onclick = close;
+  host.onclick = e => { if(e.target===host) close(); };
+  document.addEventListener("keydown", function esc2(e){
+    if(e.key==="Escape"){ close(); document.removeEventListener("keydown",esc2); } });
+}
+/* gold-star totals: every star since the injury, the run ending today, and the
+   longest run on record */
+function starCount(asOf){
+  const today = asOf || todayISO();
+  let total=0, best=0, run=0, streak=0;
+  for(let iso=INJURY; iso<=today; iso=addDays(iso,1)){
+    if(dayMeta(iso).star){ total++; run++; if(run>best) best=run; }
+    else run=0;
+  }
+  streak = run;
+  if(!streak){   /* today may simply not be finished yet — count back from yesterday */
+    let iso = addDays(today,-1);
+    while(iso>=INJURY && dayMeta(iso).star){ streak++; iso=addDays(iso,-1); }
+  }
+  return {total, streak, best};
 }
 function dayDots(iso){
   const auto = autoDots(iso);
@@ -950,7 +1216,8 @@ function renderCatalog(){
     /* `retired` hides an item from the capture grid but keeps it in the catalog,
        so previously logged entries still render their real name and dose. */
     const items = CATALOG.filter(c=>c.g===g.id && !c.retired); if(!items.length) return "";
-    return '<p class="eyebrow">'+esc(g.label)+'</p><div class="grid">'+items.map(c=>
+    return '<p class="eyebrow">'+esc(g.label)+'</p>'+
+      (g.note?'<p class="gnote">'+esc(g.note)+'</p>':'')+'<div class="grid">'+items.map(c=>
       '<button class="tile" data-id="'+c.id+'">'+
         '<i class="strip" style="background:'+g.color+'"></i>'+
         (c.dot?'<i class="earns" style="background:'+dotVar(c.dot)+'" title="Earns the '+DOT_BY[c.dot].name+' dot"></i>':'')+
@@ -980,7 +1247,7 @@ function openEntry(c){
     '<div class="field"><label>Notes</label><textarea id="n" placeholder="'+
       (isAct?'How did it feel? Pain during or after?':'Why this dose — breakthrough pain, routine, couldn’t sleep?')+'"></textarea></div>'+
     '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="ok">Log it</button></div>');
-  const q=document.getElementById("q"), step = c.q<1?0.05:(c.unit==="min"?5:1);
+  const q=document.getElementById("q"), step = c.step || (c.q<1?0.05:(c.unit==="min"?5:1));
   const mn=document.getElementById("minus"), pl=document.getElementById("plus");
   if(mn) mn.onclick=()=>q.value=Math.max(0,Math.round((Number(q.value)-step)*100)/100);
   if(pl) pl.onclick=()=>q.value=Math.round((Number(q.value)+step)*100)/100;
@@ -990,11 +1257,19 @@ function openEntry(c){
       date:document.getElementById("d").value, time:document.getElementById("t").value,
       id:c.id, q:q?Number(q.value):1, note:document.getElementById("n").value.trim()};
     if(!e.date||!e.time) return;
-    state.entries.push(e); save(); closeSheet(); renderAll();
+    state.entries.push(e);
+    /* Sleep is both a ledger row and the night's headline number, so it writes
+       through to the daily record the dashboard and charts read. */
+    if(c.sleepTotal){
+      const rec = Object.assign({}, state.daily[e.date]||{}, {sleepH:e.q, src:"manual"});
+      state.daily[e.date] = rec;
+    }
+    save(); closeSheet(); renderAll();
     let m = c.name+" logged";
     if(c.mgApap) m += " · "+dayStats(e.date).apap.toLocaleString()+" mg acetaminophen today";
     else if(c.dot) m += " · "+DOT_BY[c.dot].name+" dot earned";
     toast(m);
+    celebrateIfStar(e.date);
   };
 }
 function openStack(st){
@@ -1014,6 +1289,7 @@ function openStack(st){
     st.items.forEach(([id,q],i)=> state.entries.push({
       uid:"u"+Date.now()+i+Math.random().toString(36).slice(2,5), date, time, id, q, note:i===0?note:""}));
     save(); closeSheet(); renderAll(); toast(st.label+" logged");
+    celebrateIfStar(date);
   };
 }
 function openCheckin(){
@@ -1026,7 +1302,7 @@ function openCheckin(){
     '<div class="field"><label>Pain 0–10</label><input type="number" id="pn" min="0" max="10" value="'+(d.pain??"")+'" placeholder="4"></div></div>'+
     '<div class="field"><label>Mood 1–5</label><input type="number" id="md" min="1" max="5" value="'+(d.mood??"")+'" placeholder="3"></div>'+
     '<div class="field"><label>Note</label><textarea id="nt">'+esc(d.note||"")+'</textarea></div>'+
-    '<p style="font-size:12px;color:var(--ink-3);margin:0 0 12px">7 hours or more lights the RECOVER dot automatically.</p>'+
+    '<p style="font-size:12px;color:var(--ink-3);margin:0 0 12px">More than 6 hours lights the RECOVER dot automatically. Under that, log a nap of 15 minutes or more.</p>'+
     '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="ok">Save check-in</button></div>');
   document.getElementById("cancel").onclick=closeSheet;
   document.getElementById("ok").onclick=()=>{
@@ -1036,6 +1312,7 @@ function openCheckin(){
       pain:num("pn"),mood:num("md"),note:document.getElementById("nt").value.trim()});
     Object.keys(rec).forEach(x=>rec[x]===undefined&&delete rec[x]);
     state.daily[k]=rec; save(); closeSheet(); renderAll(); toast("Check-in saved");
+    celebrateIfStar(k);
   };
 }
 
@@ -1095,10 +1372,10 @@ function renderBoard(){
       '<li><b>Never miss twice.</b> One blank square is a rest day. Two in a row is the start of a slide. After a blank day, the next day is mandatory.</li>'+
       '<li><b>Never edit the past.</b> No filling in yesterday. The board is a record, not a scoreboard to negotiate with.</li>'+
       '</ol></div>'+
-    '<p class="disclaimer">Part 1 of your Notion doc and Part 3 use different colour maps — Part 1 has '+
-      'BLUE as RECOVER and RED as STRENGTH, while the phase write-ups use BLUE for strength and PURPLE for sleep. '+
-      'This app follows Part 1, the sticker table, since that is the sheet you buy, and adds ORANGE for CARDIO '+
-      'from BUILD onward. Worth settling before you write the legend on the whiteboard.</p>';
+    '<p class="disclaimer">Six dots, fixed slots, same order as the whiteboard. A full day means every dot '+
+      'the current phase requires — five in BUILD, and six from LOAD onward when CARDIO joins the required set. '+
+      'Dots earned outside the required set still count as bonus; they are never discarded. '+
+      'Days before September 6 hold the dots they were given under the previous rules and are not re-derived.</p>';
 
   document.getElementById("outBtn").onclick=openTimeUnit;
   document.getElementById("xtoggle").onclick=()=>{
@@ -1120,6 +1397,7 @@ function toggleDot(iso,id){
   state.board[iso].dots[id] = !dots[id];
   save(); renderAll();
   toast(DOT_BY[id].name+(!dots[id]?" earned":" cleared"));
+  celebrateIfStar(iso);
 }
 function boardGrid(){
   const months=[];
@@ -1151,7 +1429,7 @@ function boardGrid(){
       const dotsHtml = meta ? '<span class="dotgrid">'+DOTS.map(dd=>
         '<i style="background:'+(meta.dots[dd.id]?dotVar(dd.id):"transparent")+'"></i>').join("")+'</span>' : "";
       const wave = iso===GOAL ? '<span class="goalwave">🌊</span>' : "";
-      const star = meta&&meta.star ? '<span class="goalwave" style="font-size:9px;top:auto;bottom:1px;align-items:end">★</span>' : "";
+      const star = meta&&meta.star ? '<span class="bstar">\u2605</span>' : "";
       tds+='<td class="'+cls.join(" ")+'"><button data-cell="'+iso+'" aria-label="'+esc(longDate(iso))+'">'+
         '<span class="dnum">'+d+'</span>'+dotsHtml+wave+star+'</button></td>';
     }
@@ -1237,11 +1515,13 @@ function renderLedger(){
                 d0.deepMin!=null?d0.deepMin+" min deep":null,
                 d0.latency!=null?d0.latency+" min latency":null,
                 d0.score!=null?"score "+d0.score:null].filter(Boolean).join(" · ");
-    const dnote = d0.sleepH!=null
+    const loggedSleep = st.rows.some(e=>e.id==="sleep");
+    const dnote = (d0.sleepH!=null && !loggedSleep)
       ? '<tr><td class="t muted">night</td><td class="q">'+d0.sleepH+' h</td>'+
         '<td class="n">🌙 Total sleep<em>'+(d0.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td>'+
         '<td class="e"><span class="pill '+(d0.sleepH<7?"warn":"good")+'">Sleep</span></td>'+
-        '<td class="no">'+esc(bits || d0.note || "—")+'</td><td class="x"></td></tr>'
+        '<td class="no">'+(d0.note?esc(d0.note)+(bits?'<br><span class="mono" style="font-size:10px;'+
+          'color:var(--ink-3)">'+esc(bits)+'</span>':''):esc(bits||"—"))+'</td><td class="x"></td></tr>'
       : (d0.note?'<tr><td class="t muted">—</td><td class="q">—</td>'+
         '<td class="n">🌙 Sleep report<em>'+(d0.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td>'+
         '<td class="e"><span class="pill neutral">Metrics</span></td>'+
@@ -1304,9 +1584,8 @@ function sleepDebt(asOf, windowDays, baseline){
           coverage: observed/windowDays};
 }
 
-/* The most recent night that actually has sleep on it. Oura keys a night to
-   the day you woke, so "last night" is normally today's key — but early in the
-   morning, or after a gap, it is whatever came last. */
+/* The most recent night that actually has sleep on it. A night is keyed to
+   the day you woke, so "last night" is normally today's key. */
 function lastNight(){
   const days = Object.keys(state.daily).filter(d => state.daily[d] &&
                 state.daily[d].sleepH != null).sort();
@@ -1314,7 +1593,7 @@ function lastNight(){
   const iso = days[days.length-1];
   const d = state.daily[iso];
   const sessions = state.entries
-    .filter(e => e.date===iso && (e.id==="sleep_long" || e.id==="sleep_nap"))
+    .filter(e => e.date===iso && (e.id==="sleep" || e.id==="sleep_long" || e.id==="sleep_nap"))
     .sort((a,b) => a.time < b.time ? -1 : 1);
   return {iso, ...d, sessions};
 }
@@ -1326,7 +1605,9 @@ function hm(hours){
 function lastN(n){ const o=[], t=todayISO(); for(let i=n-1;i>=0;i--) o.push(addDays(t,-i)); return o; }
 function renderDash(){
   const iso=todayISO(), st=dayStats(iso), lim=state.settings.apapLimit;
+  const meta=dayMeta(iso), ph=phaseOn(iso), dbt=sleepDebt(iso), stars=starCount();
   document.getElementById("dashDate").textContent=dow(iso)+", "+longDate(iso);
+
   const lvl=apapLevel(st.apap), pct=Math.min(100,st.apap/lim*100);
   const col=lvl==="crit"?"var(--crit)":lvl==="warn"?"var(--warn)":"var(--good)";
   const verdict=lvl==="crit"?"Over your ceiling. Stop and call the pharmacist."
@@ -1336,28 +1617,129 @@ function renderDash(){
       .sort((a,b)=>(a.date+a.time)<(b.date+b.time)?1:-1)[0];
     if(!r) return null; return {r, mins:Math.round((Date.now()-new Date(r.date+"T"+r.time+":00"))/6e4)}; };
   const clock=m=>m<60?m+"m":m<2880?Math.floor(m/60)+"h "+(m%60)+"m":Math.floor(m/1440)+" days";
-  const lA=lastOf("apap"), lH=lastOf("hydro");
+  const lA=lastOf("apap");
+  const lastOpioid=state.entries.filter(e=>BY_ID[e.id]&&BY_ID[e.id].opioid)
+    .sort((a,b)=>a.date<b.date?1:-1)[0];
+
   const d14=lastN(14).map(dayStats), d7=d14.slice(-7);
   const sleepVals=d7.map(x=>x.sleepH).filter(v=>v!=null);
   const avg7=sleepVals.length?sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length:null;
-  const op7=d7.reduce((a,b)=>a+b.opioid,0), opPrev=lastN(14).slice(0,7).map(dayStats).reduce((a,b)=>a+b.opioid,0);
   const dots7=lastN(7).reduce((a,d)=>a+dayMeta(d).earnedLive.length,0);
-  const bonus7=lastN(7).reduce((a,d)=>a+dayMeta(d).bonus.length,0);
   const avail7=lastN(7).filter(d=>d>=INJURY&&d<=iso).reduce((a,d)=>a+dayMeta(d).live.length,0);
   const overDays=d14.filter(x=>x.apap>lim).length, apapDays=d14.filter(x=>x.apap>0).length;
-  const ph=phaseOn(iso);
-  const dbt=sleepDebt(iso);
+  const ln=lastNight();
+  const staleDays = ln ? daysBetween(ln.iso, iso) : null;
+  const nightOf = i => shortDate(addDays(i,-1))+" → "+shortDate(i);
+
+  /* ── the ring row ── */
+  const dayPct  = meta.live.length ? meta.earnedLive.length/meta.live.length : 0;
+  const phDays  = Math.max(1, daysBetween(ph.from, ph.to));
+  const phPct   = Math.min(1, Math.max(0, daysBetween(ph.from, iso)/phDays));
+  const rings=[
+    {v:Math.round(dayPct*100), u:"", l:"Day",     p:dayPct, c:meta.star?"var(--sand)":"var(--accent)"},
+    {v:ln&&staleDays===0?(Math.round(ln.sleepH*10)/10):"—", u:ln&&staleDays===0?"h":"", l:"Sleep",
+     p:ln&&staleDays===0?ln.sleepH/9:0, c:"var(--d-blue)"},
+    {v:stars.streak, u:"", l:"Star streak", p:stars.streak/7, c:"var(--sand)"},
+    {v:Math.round(pct), u:"%", l:"Tylenol", p:pct/100, c:col},
+    {v:Math.round(phPct*100), u:"%", l:ph.name.charAt(0)+ph.name.slice(1).toLowerCase(), p:phPct, c:"var(--d-purple)"}
+  ];
+  const ringRow='<div class="ringrow">'+rings.map(r=>
+    '<div class="ringitem"><div class="rg">'+ringGauge(r.p, r.c)+
+    '<span class="rgv">'+esc(String(r.v))+(r.u?'<small>'+r.u+'</small>':'')+'</span></div>'+
+    '<span class="rgl">'+esc(r.l)+'</span></div>').join("")+'</div>';
+
+  /* ── the focus card: the day in one word, and what is left ── */
+  const missing = meta.live.filter(id=>!meta.dots[id]);
+  const word = meta.star ? "Gold star" : dayPct>=0.6 ? "Nearly there"
+             : dayPct>0 ? "Under way" : "Open";
+  const head = meta.star ? "That is the whole day."
+             : dayPct>=0.6 ? "One or two left."
+             : dayPct>0 ? "You are on the board."
+             : mandatoryToday() ? "Today is mandatory." : "Nothing logged yet.";
+  const listNames = ids => ids.map(id=>DOT_BY[id].name).join(ids.length===2?" and ":", ")
+                              .replace(/,([^,]*)$/, ids.length>2?" and$1":"$1");
+  const body = meta.star
+    ? "Every dot "+ph.name+" requires, earned. Put a star on the square — and cross the day off if you have not."
+    : missing.length
+      ? "Left today: "+listNames(missing)+". "+DOT_BY[missing[0]].earns
+      : "Cross the day off. The X is free — you get it just for existing.";
+  const focus =
+    '<div class="focus'+(meta.star?" gold":"")+'">'+
+      '<span class="fl">'+esc(ph.em+" "+ph.name)+' · day '+daysBetween(INJURY,iso)+'</span>'+
+      '<div class="arcwrap">'+arcGauge(dayPct)+
+        '<div class="arcv"><b>'+meta.earnedLive.length+'<span style="font-size:19px;color:var(--ink-3)">'+
+          '/'+meta.live.length+'</span></b><span>'+esc(word)+'</span></div></div>'+
+      '<h3>'+esc(head)+'</h3><p>'+esc(body)+'</p>'+
+      '<div class="fdots">'+meta.live.map(id=>{
+        const on=meta.dots[id];
+        return '<div class="fd" style="color:'+dotVar(id)+'">'+
+          '<i style="background:'+(on?dotVar(id):"transparent")+'"></i>'+
+          '<b>'+DOT_BY[id].name+'</b></div>'; }).join("")+
+        (meta.bonus.length?'<div class="fd" style="color:var(--ink-3)">'+
+          '<i style="background:var(--ink-3);border-color:var(--ink-3)"></i><b>BONUS +'+meta.bonus.length+'</b></div>':'')+
+      '</div>'+
+    '</div>';
+
+  /* ── gold stars ── */
+  const strip=lastN(30).map(d=>{
+    if(d<INJURY) return '<i title="'+esc(shortDate(d))+'"></i>';
+    const m=dayMeta(d);
+    return '<i class="'+(m.star?"g":m.earned.length?"d":"")+'" title="'+esc(shortDate(d))+
+      ' · '+m.earned.length+' dots'+(m.star?" · gold star":"")+'">'+(m.star?"★":"")+'</i>';
+  }).join("");
+  const totalDays=Math.max(1, daysBetween(INJURY,iso)+1);
+  const starCard=
+    '<div class="starcard"><div class="sh"><b>'+stars.streak+'</b>'+
+      '<span>day gold-star streak'+(stars.streak?"":" — the next full day starts it")+'</span></div>'+
+      '<div class="sst">'+strip+'</div>'+
+      '<p class="sfoot"><span><b>'+stars.total+'</b> gold stars total</span>'+
+        '<span>best run <b>'+stars.best+'</b> days</span>'+
+        '<span><b>'+Math.round(stars.total/totalDays*100)+'%</b> of days since the break</span></p>'+
+      '</div>';
+
+  /* ── last night ── */
+  const ouraGrid = r => '<div class="oura">'+[
+      r && r.eff!=null     ? ['Efficiency',  r.eff+'<em>%</em>'] : null,
+      r && r.rhr!=null     ? ['Resting HR',  r.rhr+'<em> bpm</em>'] : null,
+      r && r.deepMin!=null ? ['Deep sleep',  r.deepMin+'<em> min</em>'] : null,
+      r && r.pain!=null    ? ['Pain',        r.pain+'<em> / 10</em>'] : null,
+      r && r.mood!=null    ? ['Mood',        r.mood+'<em> / 5</em>'] : null,
+      ['Sleep debt', dbt.observed
+         ? (dbt.debt<0 ? Math.abs(dbt.debt)+'<em> h ahead</em>' : dbt.debt+'<em> h</em>')
+         : '—'],
+    ].filter(Boolean).map(([k,v])=>
+      '<div><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>').join('')+'</div>';
+  const sleepCard = ln && staleDays===0
+    ? '<div class="sleepcard">'+
+        '<span class="lbl">Last night’s sleep'+
+          (ln.sleepH>6?'<span class="pill good">RECOVER</span>':'<span class="pill neutral">under 6 h</span>')+
+        '</span>'+
+        '<div class="big">'+hm(ln.sleepH)+'</div>'+
+        '<p class="when">Night of '+esc(nightOf(ln.iso))+'</p>'+
+        ouraGrid(ln)+
+      '</div>'
+    : '<div class="sleepcard">'+
+        '<span class="lbl">Last night’s sleep<span class="pill warn">not recorded</span></span>'+
+        '<div class="big" style="color:var(--ink-3)">—</div>'+
+        '<p class="when">Night of '+esc(nightOf(iso))+' — nothing logged yet. '+
+          'Tap 😴 Sleep on the capture screen.</p>'+
+        ouraGrid(null)+
+        (ln ? '<p class="stale">Most recent reading was <b>'+hm(ln.sleepH)+'</b> on the night of '+
+              esc(nightOf(ln.iso))+', '+staleDays+' day'+(staleDays===1?'':'s')+' ago.</p>' : '')+
+      '</div>';
 
   const tiles=[
     {k:"Since the break", v:daysBetween(INJURY,iso), s:"days", d:"Femur fractured "+longDate(INJURY)},
     {k:"To Hawaii", v:remaining().value, s:remaining().unit.id, d:longDate(GOAL)+", 2027"},
-    {k:"Dots this week", v:dots7, s:"/ "+avail7, d:(avail7?Math.round(dots7/avail7*100)+"% of available dots":"—")+(bonus7?" · +"+bonus7+" bonus":"")},
+    {k:"Dots this week", v:dots7, s:"/ "+avail7, d:avail7?Math.round(dots7/avail7*100)+"% of what was available":"—"},
     {k:"Dot streak", v:dotStreak(), s:"days", d:"consecutive days with at least one dot"},
+    {k:"Opioid-free", v:lastOpioid?daysBetween(lastOpioid.date,iso):"—", s:lastOpioid?"days":"",
+     d:lastOpioid?"last dose "+longDate(lastOpioid.date):"none ever logged"},
     {k:"Last acetaminophen", v:lA?clock(lA.mins):"—", s:"", d:"4 h between doses is the usual floor"},
-    {k:"Last hydromorphone", v:lH?clock(lH.mins):"—", s:"", d:"the number you want climbing"},
-    {k:"Opioid doses, 7 days", v:Math.round(op7*10)/10, s:"", d:trend(op7,opPrev)},
-    {k:"Avg sleep, 7 days", v:avg7!=null?avg7.toFixed(1):"—", s:avg7!=null?"h":"", d:avg7!=null&&avg7<7?"under the 7 h that earns RECOVER":"earning RECOVER"},
-    {k:"Sleep debt, "+dbt.windowDays+" days", v:dbt.observed?dbt.debt:"—", s:dbt.observed?"h":"",
+    {k:"Avg sleep, 7 days", v:avg7!=null?avg7.toFixed(1):"—", s:avg7!=null?"h":"",
+     d:avg7!=null?(avg7>6?"above the 6 h RECOVER line":"under the 6 h RECOVER line"):"nothing logged"},
+    {k:"Sleep debt, "+dbt.windowDays+" days",
+     v:dbt.observed?Math.abs(dbt.debt):"—", s:dbt.observed?(dbt.debt<0?"h ahead":"h behind"):"",
      d: dbt.observed
         ? (dbt.observed+" of "+dbt.windowDays+" nights recorded"+
            (dbt.coverage<0.5?" — too sparse to trust":"")+", vs "+dbt.baseline+" h baseline")
@@ -1365,50 +1747,8 @@ function renderDash(){
     {k:"Days over ceiling, 14", v:overDays, s:"/ "+apapDays, d:"days above "+lim.toLocaleString()+" mg"}
   ];
 
-  /* "Last night" is the night that ended this morning — the record keyed to
-     today. Anything older is a gap, not last night, so it never takes the
-     headline: the card says the night is blank and files the older reading
-     underneath, where it cannot be misread as current. */
-  const ln = lastNight();
-  const staleDays = ln ? daysBetween(ln.iso, iso) : null;
-  const nightOf = i => shortDate(addDays(i,-1))+" → "+shortDate(i);
-  const ouraGrid = r => '<div class="oura">'+[
-      r && r.eff!=null     ? ['Efficiency',  r.eff+'<em>%</em>'] : null,
-      r && r.rhr!=null     ? ['Resting HR',  r.rhr+'<em> bpm</em>'] : null,
-      r && r.deepMin!=null ? ['Deep sleep',  r.deepMin+'<em> min</em>'] : null,
-      r && r.latency!=null ? ['Latency',     r.latency+'<em> min</em>'] : null,
-      r && r.score!=null   ? ['Sleep score', String(r.score)] : null,
-      ['Sleep debt', dbt.observed ? dbt.debt+'<em> h</em>' : '—'],
-    ].filter(Boolean).map(([k,v])=>
-      '<div><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>').join('')+'</div>';
-  const sleepCard = ln && staleDays===0
-    ? '<div class="sleepcard">'+
-        '<span class="lbl">Last night’s sleep'+
-          (ln.src==="oura"?'<span class="pill accent">Oura</span>':'<span class="pill neutral">by hand</span>')+
-        '</span>'+
-        '<div class="big">'+hm(ln.sleepH)+'</div>'+
-        '<p class="when">Night of '+esc(nightOf(ln.iso))+
-          (ln.sessions.length>1?' · '+ln.sessions.length+' sessions':'')+'</p>'+
-        ouraGrid(ln)+
-        (ln.sessions.length>1
-          ? '<div class="sessrow">'+ln.sessions.map(e=>
-              '<span>'+(BY_ID[e.id]||{}).em+' '+h12(e.time)+' · '+hm(e.q)+'</span>').join('')+'</div>'
-          : '')+
-      '</div>'
-    : '<div class="sleepcard">'+
-        '<span class="lbl">Last night’s sleep<span class="pill warn">not recorded</span></span>'+
-        '<div class="big" style="color:var(--ink-3)">—</div>'+
-        '<p class="when">Night of '+esc(nightOf(iso))+' — nothing has come in yet. '+
-          'Log a check-in, or wait for the ring to sync.</p>'+
-        ouraGrid(null)+
-        (ln
-          ? '<p class="stale">Most recent reading was <b>'+hm(ln.sleepH)+'</b> on the night of '+
-            esc(nightOf(ln.iso))+', '+staleDays+' day'+(staleDays===1?'':'s')+' ago.</p>'
-          : '')+
-      '</div>';
-
   document.getElementById("dashBody").innerHTML=
-    sleepCard+
+    ringRow + focus + starCard + sleepCard +
     '<div class="hero"><span class="lbl">Acetaminophen today · all sources</span>'+
       '<div class="big" style="color:'+col+'">'+st.apap.toLocaleString()+
         ' <span class="of">/ '+lim.toLocaleString()+' mg</span></div>'+
@@ -1419,6 +1759,18 @@ function renderDash(){
     '<div class="tiles">'+tiles.map(t=>'<div class="stat"><span class="k">'+esc(t.k)+'</span>'+
       '<div class="v">'+esc(String(t.v))+(t.s?' <small>'+esc(t.s)+'</small>':'')+'</div>'+
       '<div class="d">'+esc(t.d)+'</div></div>').join("")+'</div>'+
+    '<div class="card"><figure><figcaption><div class="t">What actually gets done, 30 days</div>'+
+      '<div class="s">Days on which each activity was logged at least once — repeats within a day count once. '+
+      'Two Fitness items earn STRENGTH; two Rehab items earn REHAB.</div></figcaption>'+
+      '<div class="chartbox">'+activityChart(lastN(30))+'</div></figure></div>'+
+    '<div class="card"><figure><figcaption><div class="t">Dots earned, 14 days</div>'+
+      '<div class="s">Stacked by category, fixed order — same slots as the board</div></figcaption>'+
+      '<div class="chartbox">'+dotChart(lastN(14))+'</div>'+
+      '<div class="legend">'+DOTS.map(d=>'<span><i style="background:'+dotVar(d.id)+'"></i>'+d.name+'</span>').join("")+
+      '</div></figure></div>'+
+    '<div class="card"><figure><figcaption><div class="t">Sleep, 14 days</div>'+
+      '<div class="s">More than 6 hours earns RECOVER. Bone healing happens largely in slow-wave sleep.</div></figcaption>'+
+      '<div class="chartbox">'+sleepChart(d14)+'</div></figure></div>'+
     '<div class="card"><figure><figcaption><div class="t">Daily acetaminophen, 14 days</div>'+
       '<div class="s">Dashed line is your '+lim.toLocaleString()+' mg ceiling</div></figcaption>'+
       '<div class="chartbox">'+apapChart(d14,lim)+'</div>'+
@@ -1426,18 +1778,6 @@ function renderDash(){
       '<span><i style="background:var(--warn)"></i>75–100%</span>'+
       '<span><i style="background:var(--crit)"></i>Over ceiling</span>'+
       '<span><i class="ln"></i>Ceiling</span></div></figure></div>'+
-    '<div class="card"><figure><figcaption><div class="t">Sleep, 14 days</div>'+
-      '<div class="s">7 hours earns the RECOVER dot. Bone healing happens largely in slow-wave sleep.</div></figcaption>'+
-      '<div class="chartbox">'+sleepChart(d14)+'</div></figure></div>'+
-    '<div class="card"><figure><figcaption><div class="t">Sleep debt, running '+dbt.windowDays+'-day total</div>'+
-      '<div class="s">Hours short of the '+dbt.baseline+' h baseline, summed over the trailing window. '+
-      'Long nights pay it back. Nights with no data are left out rather than guessed, so gaps pull the line down.</div></figcaption>'+
-      '<div class="chartbox">'+debtChart(lastN(30))+'</div></figure></div>'+
-    '<div class="card"><figure><figcaption><div class="t">Dots earned, 14 days</div>'+
-      '<div class="s">Stacked by category, fixed order — same slots as the board</div></figcaption>'+
-      '<div class="chartbox">'+dotChart(lastN(14))+'</div>'+
-      '<div class="legend">'+DOTS.map(d=>'<span><i style="background:'+dotVar(d.id)+'"></i>'+d.name+'</span>').join("")+
-      '</div></figure></div>'+
     '<div class="card"><span class="lbl mono" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)">Current phase</span>'+
       '<h3 style="font-family:var(--serif);font-size:19px;margin:6px 0 3px;font-weight:600">'+ph.em+' '+esc(ph.name)+'</h3>'+
       '<p style="margin:0 0 10px;font-size:13px;color:var(--ink-2)">'+esc(ph.job)+'</p>'+
@@ -1475,6 +1815,77 @@ function openSettings(){
     state.settings.debtWindow=Math.max(1,Number(document.getElementById("win").value)||14);
     save(); closeSheet(); renderAll(); toast("Strengths updated");
   };
+}
+/* ── RING GAUGE ──
+   One value against its own ceiling. A recessive track, one coloured arc, the
+   number in the middle. `pct` is 0–1; anything past 1 fills the ring and is
+   reported by the number, not by a second lap. */
+function ringGauge(pct, color, size, stroke){
+  size = size||58; stroke = stroke||5;
+  const r = (size-stroke)/2, c = 2*Math.PI*r;
+  const v = Math.max(0, Math.min(1, pct||0));
+  return '<svg viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" aria-hidden="true">'+
+    '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r.toFixed(2)+'" fill="none" '+
+      'stroke="var(--surface-3)" stroke-width="'+stroke+'"/>'+
+    (v>0?'<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r.toFixed(2)+'" fill="none" stroke="'+color+
+      '" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+
+      (c*v).toFixed(2)+' '+c.toFixed(2)+'" transform="rotate(-90 '+size/2+' '+size/2+')"/>':'')+
+    '</svg>';
+}
+/* The big one on the focus card: a 240° arc, open at the bottom, in the Oura
+   idiom — the shape reads as "a dial", not "a pie". */
+function arcGauge(pct){
+  const W=184, H=114, cx=W/2, cy=94, r=76, span=240, start=-210;
+  const pol=(a,rr)=>[cx+rr*Math.cos(a*Math.PI/180), cy+rr*Math.sin(a*Math.PI/180)];
+  const arc=(from,to,rr)=>{ const [x1,y1]=pol(from,rr), [x2,y2]=pol(to,rr);
+    return "M"+x1.toFixed(1)+","+y1.toFixed(1)+"A"+rr+","+rr+" 0 "+((to-from)>180?1:0)+" 1 "+
+      x2.toFixed(1)+","+y2.toFixed(1); };
+  const v = Math.max(0, Math.min(1, pct||0));
+  const gold = v>=1;   /* a full dial is drawn in gold rather than accent */
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="100%" aria-hidden="true">'+
+    '<path d="'+arc(start,start+span,r)+'" fill="none" stroke="var(--surface-3)" stroke-width="7" stroke-linecap="round"/>'+
+    (v>0?'<path d="'+arc(start,start+span*v,r)+'" fill="none" stroke="'+
+      (gold?"var(--sand)":"var(--accent)")+'" stroke-width="7" stroke-linecap="round"/>':'')+
+    '</svg>';
+}
+/* ── WHAT ACTUALLY GETS DONE ──
+   Days-with-at-least-one, not raw entry count: logging ankle pumps four times
+   in a day is one day of ankle pumps. One measure, one hue — the section tag
+   beside each name carries the grouping, so nothing depends on colour. */
+function activityChart(isos){
+  const ACT = new Set(["fit","rehab"]);
+  const EXTRA = new Set(["breath","journal","mtherapy","nap","sleep","checkin","winddown"]);
+  const days = new Set(isos);
+  const tally = {};
+  state.entries.forEach(e=>{
+    if(!days.has(e.date)) return;
+    const c = BY_ID[e.id]; if(!c) return;
+    if(!ACT.has(c.g) && !EXTRA.has(c.id)) return;
+    (tally[c.id] = tally[c.id] || new Set()).add(e.date);
+  });
+  const rows = Object.entries(tally).map(([id,set])=>({c:BY_ID[id], n:set.size}))
+    .sort((a,b)=> b.n-a.n || a.c.name.localeCompare(b.c.name)).slice(0,9);
+  const W=640, rowH=30, mT=6, mL=210, mR=42, H=mT+rows.length*rowH+6;
+  if(!rows.length) return '<svg class="chart" viewBox="0 0 '+W+' 90"><text x="'+(W/2)+'" y="50" '+
+    'text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-3)">'+
+    'nothing logged in this window</text></svg>';
+  const max = Math.max(...rows.map(r=>r.n), 1), iw = W-mL-mR;
+  const tag = c => c.g==="fit" ? "FITNESS" : c.g==="rehab" ? "REHAB" : "BODY";
+  const body = rows.map((r,i)=>{
+    const y = mT+i*rowH, bw = Math.max(3, (r.n/max)*iw), first = i===0;
+    return '<text x="0" y="'+(y+13)+'" font-size="12.5" fill="var(--ink)">'+
+        esc(r.c.em+" "+r.c.name).slice(0,40)+'</text>'+
+      '<text x="0" y="'+(y+25)+'" font-family="var(--mono)" font-size="8.5" letter-spacing="1.1" '+
+        'fill="var(--ink-3)">'+tag(r.c)+'</text>'+
+      '<rect x="'+mL+'" y="'+(y+5)+'" width="'+bw.toFixed(1)+'" height="16" rx="4" fill="var(--accent)"'+
+        (first?'':' opacity=".62"')+'/>'+
+      '<text x="'+(mL+bw+8).toFixed(1)+'" y="'+(y+17)+'" font-family="var(--mono)" font-size="11" '+
+        'font-weight="600" fill="var(--ink-2)">'+r.n+'</text>'+
+      '<rect x="0" y="'+y+'" width="'+W+'" height="'+rowH+'" fill="transparent" data-tip="'+
+        esc(r.c.name)+'|'+r.n+' of '+isos.length+' days|'+esc(r.c.fx)+'"/>';
+  }).join("");
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" '+
+    'aria-label="Activities by number of days completed">'+body+'</svg>';
 }
 function topRound(x,y,w,h,r){ r=Math.max(0,Math.min(r,w/2,h));
   return "M"+x+","+(y+h)+"V"+(y+r)+"a"+r+","+r+" 0 0 1 "+r+",-"+r+"h"+(w-2*r)+"a"+r+","+r+" 0 0 1 "+r+","+r+"V"+(y+h)+"Z"; }
@@ -1638,8 +2049,8 @@ function renderPlan(){
     '<div class="card"><h3 style="font-family:var(--serif);font-size:17px;margin:0 0 12px;font-weight:600">Setup checklist</h3>'+
       '<ul class="ms">'+["Buy quarter-inch colour-coding dots — 5 colours",
         "Buy gold star stickers for perfect days","Attach sticker sheets to the whiteboard (clip or magnet)",
-        "Write “Training, not healing.” top-left above AUGUST","Draw phase boundary lines at G5, G9, G13",
-        "Write phase names in the A–F cells of Aug, Oct, Dec, Feb","Mark the Hawaii square in March",
+        "Write “Training, not healing.” top-left above AUGUST","Draw phase boundary lines at Sep 1, Nov 1 and Jan 1",
+        "Write phase names above Aug, Sep, Nov and Jan","Mark the Hawaii squares, March 15–25",
         "Choose the habit-stack anchor and write it on the board",
         "Ask Dr. Laughren for the specific loading progression from week six",
         "Lock in the physio referral before Oct 1"].map((m,i)=>{
@@ -1805,7 +2216,7 @@ document.getElementById("restoreBtn").onclick=()=>{
   document.getElementById("reseed").onclick=()=>{ state=seedState(); save(); closeSheet(); renderAll(); toast("Reset to the Notion seed data"); };
   document.getElementById("ok").onclick=()=>{
     try{ const o=JSON.parse(document.getElementById("rj").value); if(!o.entries) throw 0;
-      state=migrate(o); save(); closeSheet(); renderAll(); toast("Restored");
+      state=migrate(o); freezeHistory(); save(); closeSheet(); renderAll(); toast("Restored");
     }catch(e){ toast("That is not a valid backup file"); }
   };
 };
@@ -1813,97 +2224,8 @@ document.getElementById("restoreBtn").onclick=()=>{
 if(state.settings && state.settings.theme) document.documentElement.setAttribute("data-theme",state.settings.theme);
 renderCatalog();
 
-function applyOura(delay){
-  const oura = importOura();
-  if(!oura) return false;
-  try{ history.replaceState(null, "", location.pathname + location.search); }
-  catch(e){ location.hash = ""; }
-  if(oura.unchanged) return false;          /* same sessions as the last pull */
-  const msg = oura.error ? oura.error
-    : "Oura: "+oura.total+" h across "+oura.sessions+" session"+
-      (oura.sessions===1?"":"s")+" for "+shortDate(oura.day)+
-      (oura.replaced ? " (was "+oura.was+" h)" : "");
-  setTimeout(()=>toast(msg), delay);
-  return !oura.error;
-}
-applyOura(400);
-
-/* If the app is already open when the automation fires, the browser treats the
-   new fragment as a same-document navigation and never reloads — so catch it
-   here too, or the morning's sleep would silently fail to import. */
-window.addEventListener("hashchange", ()=>{ if(applyOura(0)) renderAll(); });
-
+freezeHistory();
 renderAll();
-
-/* ════════ OURA IMPORT ════════
-   The page cannot call Oura itself — the sandbox blocks outbound requests, and
-   OAuth needs a client secret a browser must never hold. Something outside does
-   the call and hands the result over by opening:
-
-     <app-url>#oura=YYYY-MM-DD&s=HH:MM,HOURS,TYPE&s=...&rhr=60&eff=88
-
-   The day key is Oura's own: the day you woke, so a pull this morning files
-   last night's sleep under today. Each session becomes its own ledger entry at
-   the time it started, and the day's total is their sum. Entry ids are derived
-   from day+start, so the 3pm and 8pm pulls overwrite the 10am rows rather than
-   duplicating them. */
-function sleepItemFor(type){ return /nap/i.test(type||"") ? "sleep_nap" : "sleep_long"; }
-
-function importOura(){
-  const h = location.hash;
-  const m = /[#&]oura=([^&]+)/.exec(h);
-  if(!m) return null;
-  const day = decodeURIComponent(m[1]).trim();
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(day))
-    return {error:"That sleep link has no readable date."};
-  if(LOAD_ERROR)
-    return {error:"Your saved record could not be read — import refused so nothing is overwritten."};
-
-  const sessions = [];
-  const re = /[#&]s=([^&]+)/g;
-  let g;
-  while((g = re.exec(h))){
-    const [time, hrs, type] = decodeURIComponent(g[1]).split(",");
-    const hours = Number(hrs);
-    if(!/^\d{1,2}:\d{2}$/.test(time||"") || !isFinite(hours) || hours<=0 || hours>24) continue;
-    sessions.push({time: time.padStart(5,"0"), hours: Math.round(hours*100)/100,
-                   type: (type||"long_sleep").trim()});
-  }
-  if(!sessions.length) return {error:"That sleep link carried no usable sessions."};
-
-  const num = k => { const x=new RegExp("[#&]"+k+"=([^&]+)").exec(h);
-                     return x && isFinite(Number(x[1])) ? Number(x[1]) : null; };
-
-  /* Drop any previously imported sessions for this day, then re-add — so a
-     later pull replaces the day cleanly even if Oura merged or split records. */
-  const prefix = "oura:"+day+":";
-  const rows = sessions.map(x=>({
-    uid: prefix+x.time, date: day, time: x.time, id: sleepItemFor(x.type),
-    q: x.hours, note: "Oura · "+x.type }));
-  const sig = list => list.filter(e=>e.uid.startsWith(prefix))
-                          .map(e=>e.uid+"|"+e.q).sort().join(";");
-  const before = sig(state.entries), after = sig(rows);
-  state.entries = state.entries.filter(e=>!e.uid.startsWith(prefix)).concat(rows);
-
-  const total = Math.round(sessions.reduce((a,x)=>a+x.hours,0)*100)/100;
-  const rec = Object.assign({}, state.daily[day] || {});
-  const prevTotal = rec.sleepH;
-  rec.sleepH = total;
-  const eff = num("eff"), rhr = num("rhr");
-  if(eff !== null) rec.eff = eff;
-  if(rhr !== null) rec.rhr = rhr;
-  rec.src = "oura";
-  const hh = Math.floor(total), mm = Math.round((total-hh)*60);
-  rec.note = "Oura: "+hh+" h "+mm+" m across "+sessions.length+
-             " session"+(sessions.length===1?"":"s");
-  state.daily[day] = rec;
-
-  if(before === after && prevTotal === total)
-    return {day, total, sessions:sessions.length, unchanged:true};
-  save();
-  return {day, total, sessions:sessions.length,
-          replaced: prevTotal!=null && prevTotal!==total, was:prevTotal};
-}
 
 if(LOAD_ERROR){
   const w=document.getElementById("loadwarn");

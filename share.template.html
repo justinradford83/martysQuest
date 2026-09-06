@@ -228,6 +228,44 @@ function renderDash(){
       m.apap.toLocaleString()+' mg APAP</span>':'')+'</td></tr>').join("")
     : '<tr><td colspan="4" class="muted">Nothing logged in the last 7 days.</td></tr>';
 
+  /* ── the snapshot at a glance, in the same idiom as the tracker ──
+     Everything here is measured against the snapshot date, not the reader's
+     clock, so a link opened next week still describes the day it was made. */
+  const asOfD = SHARE.ts || iso;
+  const metaD = dayMeta(asOfD), phD = phaseOn(asOfD), stD = dayStats(asOfD);
+  const stars = starCount(asOfD);
+  const dayPct = metaD.live.length ? metaD.earnedLive.length/metaD.live.length : 0;
+  const phDays = Math.max(1, daysBetween(phD.from, phD.to));
+  const phPct  = Math.min(1, Math.max(0, daysBetween(phD.from, asOfD)/phDays));
+  const nightD = state.daily[asOfD] && state.daily[asOfD].sleepH!=null ? state.daily[asOfD].sleepH : null;
+  const apapPct = Math.min(100, stD.apap/lim*100);
+  const apapCol = apapLevel(stD.apap)==="crit"?"var(--crit)":apapLevel(stD.apap)==="warn"?"var(--warn)":"var(--good)";
+  const ringRow = '<div class="ringrow">'+[
+    {v:Math.round(dayPct*100), u:"", l:"Day", p:dayPct, c:metaD.star?"var(--sand)":"var(--accent)"},
+    {v:nightD!=null?(Math.round(nightD*10)/10):"—", u:nightD!=null?"h":"", l:"Sleep",
+     p:nightD!=null?nightD/9:0, c:"var(--d-blue)"},
+    {v:stars.streak, u:"", l:"Star streak", p:stars.streak/7, c:"var(--sand)"},
+    {v:Math.round(apapPct), u:"%", l:"Tylenol", p:apapPct/100, c:apapCol},
+    {v:Math.round(phPct*100), u:"%", l:phD.name.charAt(0)+phD.name.slice(1).toLowerCase(), p:phPct, c:"var(--d-purple)"}
+  ].map(r=>'<div class="ringitem"><div class="rg">'+ringGauge(r.p, r.c)+
+    '<span class="rgv">'+esc(String(r.v))+(r.u?'<small>'+r.u+'</small>':'')+'</span></div>'+
+    '<span class="rgl">'+esc(r.l)+'</span></div>').join("")+'</div>';
+
+  const stripDays = []; for(let k=29;k>=0;k--) stripDays.push(addDays(asOfD,-k));
+  const strip = stripDays.map(d=>{
+    if(d<INJURY) return '<i></i>';
+    const m=dayMeta(d);
+    return '<i class="'+(m.star?"g":m.earned.length?"d":"")+'" title="'+esc(shortDate(d))+
+      ' · '+m.earned.length+' dots">'+(m.star?"★":"")+'</i>'; }).join("");
+  const totalDays = Math.max(1, daysBetween(INJURY,asOfD)+1);
+  const starCard =
+    '<div class="starcard"><div class="sh"><b>'+stars.streak+'</b>'+
+      '<span>day gold-star streak — every dot the phase requires, earned</span></div>'+
+      '<div class="sst">'+strip+'</div>'+
+      '<p class="sfoot"><span><b>'+stars.total+'</b> gold stars total</span>'+
+        '<span>best run <b>'+stars.best+'</b> days</span>'+
+        '<span><b>'+Math.round(stars.total/totalDays*100)+'%</b> of days since the break</span></p></div>';
+
   /* The reader may open this link days after it was made, so the card is
      honest about the snapshot, not about their clock: "last night" is the
      night that ended on the snapshot date. An older reading never takes the
@@ -272,7 +310,7 @@ function renderDash(){
       '</div>';
 
   document.getElementById("dashBody").innerHTML=
-    sleepCard+
+    ringRow+starCard+sleepCard+
     '<div class="hero"><span class="lbl">Acetaminophen · all sources · '+
       (isToday?"today":esc(longDate(shown.iso))+" · last day with doses")+'</span>'+
       '<div class="big" style="color:'+col+'">'+shown.apap.toLocaleString()+
@@ -353,7 +391,8 @@ function renderLedger(){
       ? '<tr><td class="t muted">night</td><td class="q">'+d0.sleepH+' h</td>'+
         '<td class="n">🌙 Total sleep<em>'+(d0.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td>'+
         '<td class="e"><span class="pill '+(d0.sleepH<7?"warn":"good")+'">Sleep</span></td>'+
-        (notes?'<td class="no">'+esc(bits||d0.note||"—")+'</td>':'')+'</tr>'
+        (notes?'<td class="no">'+(d0.note?esc(d0.note)+(bits?'<br><span class="mono" style="font-size:10px;'+
+          'color:var(--ink-3)">'+esc(bits)+'</span>':''):esc(bits||"—"))+'</td>':'')+'</tr>'
       : ((notes&&d0.note)?'<tr><td class="t muted">—</td><td class="q">—</td>'+
         '<td class="n">🌙 Sleep report<em>'+(d0.src==="oura"?"Oura ring · imported":"logged by hand")+'</em></td>'+
         '<td class="e"><span class="pill neutral">Metrics</span></td>'+

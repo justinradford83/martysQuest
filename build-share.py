@@ -48,7 +48,7 @@ BLOCKS = {
     ),
     # charts: topRound, apapChart, sleepChart, dotChart, wireHover
     "__SHARED_CHARTS__": between(
-        "function topRound(",
+        "/* ── RING GAUGE ──",
         "/* ════════ 5 · PLAN ════════ */",
         "chart",
     ),
@@ -76,7 +76,10 @@ for marker, code in BLOCKS.items():
 # Fail the build if any note text from the tracker survived into the viewer:
 # the 5th argument of an s(...) seed call, and any note: on a seed daily record.
 notes = set(re.findall(r's\("[\d-]+","[\d:]+","\w+",[\d.]+,"((?:[^"\\]|\\.)+)"\)', SRC))
-notes |= set(re.findall(r'note:\s*"((?:[^"\\]|\\.)+)"', SRC))
+# `note:` also names UI copy elsewhere in the file (group captions, for one), so
+# only the seed block is scanned for it — that is where the clinical text lives.
+_seed = SRC[SRC.index("/* ════════ SEED"):SRC.index("/* ════════ STATE ════════ */")]
+notes |= set(re.findall(r'note:\s*"((?:[^"\\]|\\.)+)"', _seed))
 leaked = sorted(n for n in notes if n in out)
 if leaked:
     sys.exit(
