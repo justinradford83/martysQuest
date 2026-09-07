@@ -284,6 +284,48 @@ textarea{resize:vertical;min-height:60px;font-size:14px}
 .sleepcard .stale{font-size:11.5px;color:var(--ink-3);margin:13px 0 0;padding-top:11px;
   border-top:1px solid var(--line-soft);line-height:1.45}
 .sleepcard .stale b{font-weight:600;color:var(--ink-2);font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* ── ASRM QUESTIONNAIRE ──
+   Radio semantics without radio chrome: one option per group is `aria-checked`,
+   arrow keys move within a group, and the group is a real radiogroup so a
+   screen reader announces "3 of 5". */
+.qgroup{border:1px solid var(--line-soft);border-radius:var(--r);padding:12px;margin-bottom:11px;
+  background:var(--surface-2)}
+.qgroup.answered{border-color:var(--line)}
+.qhead{display:flex;align-items:baseline;gap:8px;margin:0 0 9px}
+.qhead b{font-size:14px;font-weight:600}
+.qhead .qn{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--ink-3)}
+.qhead .qs{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums}
+.qopt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:var(--surface);
+  border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:9px 11px;margin-bottom:5px;
+  color:var(--ink-2);font:inherit;font-size:13px;line-height:1.4;cursor:pointer}
+.qopt:last-child{margin-bottom:0}
+.qopt .rad{flex:0 0 auto;width:16px;height:16px;border-radius:50%;border:2px solid var(--line);
+  margin-top:1px;position:relative}
+.qopt[aria-checked="true"]{border-color:var(--d-purple);background:var(--surface-3);color:var(--ink)}
+.qopt[aria-checked="true"] .rad{border-color:var(--d-purple)}
+.qopt[aria-checked="true"] .rad::after{content:"";position:absolute;inset:2.5px;border-radius:50%;
+  background:var(--d-purple)}
+.qopt .pt{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums}
+.qtotal{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:var(--r);
+  padding:13px 14px;margin:2px 0 14px;background:var(--surface-2)}
+.qtotal b{font-family:var(--mono);font-size:28px;font-weight:600;line-height:1;
+  font-variant-numeric:tabular-nums}
+.qtotal .qt-of{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.qtotal .qt-say{font-size:12px;color:var(--ink-2);line-height:1.4}
+.asrmres{text-align:center;padding:6px 0 4px}
+.asrmres .big{font-family:var(--mono);font-size:52px;font-weight:600;line-height:1;
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.asrmres .of{font-family:var(--mono);font-size:13px;color:var(--ink-3);display:block;margin-top:5px}
+.asrmbreak{margin:16px 0 0;border-top:1px solid var(--line-soft);padding-top:12px}
+.asrmbreak div{display:flex;gap:10px;align-items:baseline;font-size:12.5px;padding:4px 0;
+  border-bottom:1px solid var(--line-soft)}
+.asrmbreak div:last-child{border-bottom:0}
+.asrmbreak .bk{color:var(--ink-3);min-width:112px}
+.asrmbreak .bv{color:var(--ink-2);flex:1}
+.asrmbreak .bn{font-family:var(--mono);font-weight:600;color:var(--ink)}
+
 .gnote{font-size:12px;color:var(--ink-3);margin:-6px 0 10px;line-height:1.45;max-width:52ch}
 .oura{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
 .oura div{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-sm);
@@ -682,9 +724,75 @@ const BENCH = {
   "2027-03":"Full clearance battery + paddle time trial"
 };
 
+/* ════════ ASRM — ALTMAN SELF-RATING MANIA SCALE ════════
+   Altman EG, Hedeker D, Peterson JL, Davis JM. "The Altman Self-Rating Mania
+   Scale." Biol Psychiatry 1997;42(10):948–55.
+
+   Five domains — positive mood, self-confidence, sleep, speech, activity —
+   with five statements each scored 0 to 4, so the total runs 0 to 20. The
+   published screening threshold is 6: at that cut the scale reaches 85.5%
+   sensitivity and 87.3% specificity for mania. It is a SCREEN, not a
+   diagnosis, and it does not replace Dr. Cameron.
+
+   The recall period is the past week. Altman's own glossary travels with the
+   questions because the words are doing precise work: "occasionally" means
+   once or twice, "often" means several times or more, "frequently" means most
+   of the time. Statements are reproduced verbatim — an instrument that has
+   been reworded is no longer the instrument that was validated. */
+const ASRM_MAX = 20, ASRM_CUT = 6;
+const ASRM = [
+  {k:"Positive mood", o:[
+    "I do not feel happier or more cheerful than usual.",
+    "I occasionally feel happier or more cheerful than usual.",
+    "I often feel happier or more cheerful than usual.",
+    "I feel happier or more cheerful than usual most of the time.",
+    "I feel happier or more cheerful than usual all of the time."]},
+  {k:"Self-confidence", o:[
+    "I do not feel more self-confident than usual.",
+    "I occasionally feel more self-confident than usual.",
+    "I often feel more self-confident than usual.",
+    "I feel more self-confident than usual.",
+    "I feel extremely self-confident all of the time."]},
+  {k:"Sleep patterns", o:[
+    "I do not need less sleep than usual.",
+    "I occasionally need less sleep than usual.",
+    "I often need less sleep than usual.",
+    "I frequently need less sleep than usual.",
+    "I can go all day and night without any sleep and still not feel tired."]},
+  {k:"Speech", o:[
+    "I do not talk more than usual.",
+    "I occasionally talk more than usual.",
+    "I often talk more than usual.",
+    "I frequently talk more than usual.",
+    "I talk constantly and cannot be interrupted."]},
+  {k:"Activity level", o:[
+    "I have not been more active (either socially, sexually, at work, home or school) than usual.",
+    "I have occasionally been more active than usual.",
+    "I have often been more active than usual.",
+    "I have frequently been more active than usual.",
+    "I am constantly active or on the go all the time."]}
+];
+/* Altman defines one threshold and says severity rises with the score; he does
+   not define named bands above it, so neither does this. */
+function asrmBand(score){
+  return score >= ASRM_CUT
+    ? {level:"warn", short:"At or above the threshold",
+       say:"6 or more is the published screening threshold for a manic or hypomanic condition. "+
+           "Higher scores mean more severe symptoms. Worth telling Dr. Cameron, and worth noting "+
+           "what your sleep has been doing this week."}
+    : {level:"good", short:"Below the threshold",
+       say:"Scores of 0 to 5 are unlikely to indicate manic symptoms. Keep the baseline — a score "+
+           "only means something next to the ones before it."};
+}
+function asrmEntries(){
+  return state.entries.filter(e=>e.id==="asrm")
+    .sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1);
+}
+
 /* ════════ CATALOG ════════ */
 const GROUPS = [
-  {id:"mind",  label:"Mental health",           color:"var(--d-purple)"},
+  {id:"mind",  label:"Mental health",           color:"var(--d-purple)",
+   note:"Running the mania self-rating earns SPIRITUAL. It is a screen, not a diagnosis."},
   {id:"pain",  label:"Pain control",            color:"var(--crit)"},
   {id:"sleep", label:"Sleep",                   color:"var(--accent)"},
   {id:"supp",  label:"Vitamins & supplements",  color:"var(--good)"},
@@ -708,6 +816,7 @@ const GROUPS = [
    Items in `fit` and `rehab` need no tag: two of either earns its dot. */
 const CATALOG = [
   {id:"lamo",   em:"⚖️",   name:"Lamotrigine",             common:"Lamictal · 1 tab twice daily", dose:"25 mg", unit:"tab", q:1, g:"mind", fx:"Mood stabiliser"},
+  {id:"asrm",   em:"🧭",   name:"Mania self-rating",       common:"Altman scale · 5 questions", dose:"—", unit:"pts", q:0, g:"mind", fx:"Mood screening", dot:"purple", scaleMax:20, asrmTest:true},
 
   {id:"apap",   em:"💊",   name:"Acetaminophen",           common:"Tylenol Extra Strength", dose:"500 mg", unit:"tab", q:2, g:"pain", fx:"Pain relief", mgApap:500},
   {id:"ibu",    em:"🧯",   name:"Ibuprofen",               common:"Advil", dose:"200 mg", unit:"tab", q:2, g:"pain", fx:"Anti-inflammatory"},
@@ -1232,6 +1341,7 @@ function renderCatalog(){
 }
 function openEntry(c){
   if(c.checkin) return openCheckin();
+  if(c.asrmTest) return openASRM();
   const isAct = ["rehab","body"].includes(c.g);
   showSheet(
     '<h3>'+c.em+' '+esc(c.name)+'</h3>'+
@@ -1271,6 +1381,114 @@ function openEntry(c){
     toast(m);
     celebrateIfStar(e.date);
   };
+}
+/* ── THE MANIA SELF-RATING ──
+   One sheet, five groups, a live total. Save stays disabled until all five are
+   answered: a partial ASRM is not a low score, it is not a score at all. */
+function openASRM(pre){
+  const ans = pre && pre.a ? pre.a.slice() : [null,null,null,null,null];
+  const iso = (pre && pre.date) || todayISO();
+  const groups = ASRM.map((g,qi)=>
+    '<div class="qgroup" data-g="'+qi+'"><p class="qhead"><span class="qn">'+(qi+1)+'</span>'+
+      '<b>'+esc(g.k)+'</b><span class="qs" data-qs="'+qi+'">—</span></p>'+
+      '<div role="radiogroup" aria-label="'+esc(g.k)+'">'+
+      g.o.map((t,v)=>'<button type="button" class="qopt" role="radio" aria-checked="false" '+
+        'data-q="'+qi+'" data-v="'+v+'"><span class="rad"></span><span>'+esc(t)+'</span>'+
+        '<span class="pt">'+v+'</span></button>').join("")+'</div></div>').join("");
+
+  showSheet('<h3>🧭 Mania self-rating</h3>'+
+    '<p class="sh-sub">Altman Self-Rating Mania Scale · 0–20</p>'+
+    '<div class="alert" style="margin:0 0 14px"><b>Answer for the past week</b>'+
+      'Choose the one statement in each group that best describes how you have been feeling. '+
+      '“Occasionally” means once or twice · “often” means several times or more · '+
+      '“frequently” means most of the time.</div>'+
+    groups+
+    '<div class="qtotal"><b id="asum">0</b><span class="qt-of">/ '+ASRM_MAX+'</span>'+
+      '<span class="qt-say" id="asay">Answer all five groups.</span></div>'+
+    '<div class="row2"><div class="field"><label>Date</label>'+
+      '<input type="date" id="d" value="'+iso+'"></div>'+
+      '<div class="field"><label>Time</label><input type="time" id="t" value="'+nowHM()+'"></div></div>'+
+    '<div class="field"><label>Notes</label><textarea id="n" placeholder="'+
+      'Anything worth remembering — sleep this week, stress, a missed dose"></textarea></div>'+
+    '<div class="btnrow"><button class="btn ghost" id="cancel">Cancel</button>'+
+      '<button class="btn" id="ok" disabled>Save score</button></div>');
+
+  const sum = () => ans.reduce((a,v)=>a+(v||0),0);
+  const done = () => ans.every(v=>v!==null);
+  function paint(){
+    sheet.querySelectorAll(".qopt").forEach(b=>
+      b.setAttribute("aria-checked", ans[+b.dataset.q]===+b.dataset.v ? "true" : "false"));
+    sheet.querySelectorAll("[data-qs]").forEach(el=>{
+      const v = ans[+el.dataset.qs]; el.textContent = v===null ? "—" : v+" / 4"; });
+    sheet.querySelectorAll(".qgroup").forEach(el=>
+      el.classList.toggle("answered", ans[+el.dataset.g]!==null));
+    const t = sum(), band = asrmBand(t);
+    const el = document.getElementById("asum");
+    el.textContent = t;
+    el.style.color = done() ? (band.level==="warn"?"var(--warn)":"var(--good)") : "var(--ink-3)";
+    document.getElementById("asay").textContent = done()
+      ? band.short+" — "+band.say.split(". ")[0]+"."
+      : (5-ans.filter(v=>v!==null).length)+" group"+
+        (5-ans.filter(v=>v!==null).length===1?"":"s")+" still to answer.";
+    document.getElementById("ok").disabled = !done();
+  }
+  sheet.querySelectorAll(".qopt").forEach(b=> b.onclick=()=>{
+    ans[+b.dataset.q] = +b.dataset.v; paint(); });
+  /* arrow keys move inside a group, the way a radio group is expected to */
+  sheet.querySelectorAll('[role="radiogroup"]').forEach(g=>{
+    g.addEventListener("keydown", ev=>{
+      const step = ev.key==="ArrowDown"||ev.key==="ArrowRight" ? 1
+                 : ev.key==="ArrowUp"||ev.key==="ArrowLeft" ? -1 : 0;
+      if(!step) return;
+      ev.preventDefault();
+      const opts=[...g.querySelectorAll(".qopt")], qi=+opts[0].dataset.q;
+      const next=Math.max(0,Math.min(4,(ans[qi]===null?-1:ans[qi])+step));
+      ans[qi]=next; paint(); opts[next].focus();
+    });
+  });
+  paint();
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=()=>{
+    const date=document.getElementById("d").value, time=document.getElementById("t").value;
+    if(!date||!time || !done()) return;
+    const score=sum();
+    const breakdown=ASRM.map((g,i)=>g.k+" "+ans[i]).join(" · ");
+    const userNote=document.getElementById("n").value.trim();
+    const uid="a"+Date.now()+Math.random().toString(36).slice(2,6);
+    state.entries.push({uid, date, time, id:"asrm", q:score, a:ans.slice(),
+      note:(userNote?userNote+" — ":"")+"ASRM "+score+"/"+ASRM_MAX+" · "+breakdown});
+    save(); renderAll();
+    showASRMResult(uid);
+    celebrateIfStar(date);
+  };
+}
+/* The result screen, shown once the score is already saved. `uid` identifies
+   the reading being shown so it is not compared against itself. */
+function showASRMResult(uid){
+  const all=asrmEntries(), me=all.find(e=>e.uid===uid);
+  if(!me) return;
+  const score=me.q, ans=me.a||[0,0,0,0,0], date=me.date;
+  const band=asrmBand(score);
+  const col=band.level==="warn"?"var(--warn)":"var(--good)";
+  const prev=all.filter(e=>e.uid!==uid && (e.date+e.time) <= (me.date+me.time)).pop();
+  const delta=prev? score-prev.q : null;
+  showSheet('<h3>🧭 Your score</h3><p class="sh-sub">'+esc(longDate(date))+' · Altman scale</p>'+
+    '<div class="asrmres"><div class="big" style="color:'+col+'">'+score+'</div>'+
+      '<span class="of">out of a possible '+ASRM_MAX+'</span></div>'+
+    '<div class="alert" style="margin:16px 0 0;border-color:'+col+';color:'+col+'"><b>'+esc(band.short)+'</b>'+
+      esc(band.say)+'</div>'+
+    (delta!==null?'<p style="font-size:12.5px;color:var(--ink-2);margin:12px 0 0">'+
+      (delta===0?'Unchanged from your last score':
+       (delta>0?'Up '+delta:'Down '+Math.abs(delta))+' point'+(Math.abs(delta)===1?'':'s')+
+       ' from your last score')+' of '+prev.q+' on '+esc(longDate(prev.date))+'.</p>':'')+
+    '<div class="asrmbreak">'+ASRM.map((g,i)=>
+      '<div><span class="bk">'+esc(g.k)+'</span><span class="bv">'+esc(g.o[ans[i]])+'</span>'+
+      '<span class="bn">'+ans[i]+'</span></div>').join("")+'</div>'+
+    '<p style="font-size:12px;color:var(--ink-3);margin:14px 0 0">Saved to the ledger, and it lights '+
+      'the SPIRITUAL dot for the day. A screening score is not a diagnosis — it is a number to bring '+
+      'to Dr. Cameron, especially two or three of them in a row.</p>'+
+    '<div class="btnrow"><button class="btn" id="cancel">Done</button></div>');
+  document.getElementById("cancel").onclick=closeSheet;
 }
 function openStack(st){
   showSheet('<h3>'+st.em+' '+esc(st.label)+'</h3><p class="sh-sub">Logs all of these at one time</p>'+
@@ -1497,7 +1715,8 @@ function renderLedger(){
       const tod=timeOfDay(e.time), tag=tod!==lastTod?'<span class="tod">'+tod+'</span>':''; lastTod=tod;
       const mg=apapMg(e);
       return '<tr><td class="t">'+h12(e.time)+tag+'</td>'+
-        '<td class="q">'+(c.unit===""?"—":fmtQty(e.q,c.unit))+'</td>'+
+        '<td class="q">'+(c.scaleMax ? e.q+' / '+c.scaleMax
+                          : c.unit===""?"—":fmtQty(e.q,c.unit))+'</td>'+
         '<td class="n">'+c.em+' '+esc(c.name)+
           (c.common&&c.common!=="—"?'<em>'+esc(c.common)+(c.dose&&c.dose!=="—"?' · '+esc(c.dose):'')+'</em>':'')+'</td>'+
         '<td class="e"><span class="pill neutral">'+esc(c.fx||"—")+'</span>'+
@@ -1621,6 +1840,8 @@ function renderDash(){
   const lastOpioid=state.entries.filter(e=>BY_ID[e.id]&&BY_ID[e.id].opioid)
     .sort((a,b)=>a.date<b.date?1:-1)[0];
 
+  const asrmAll=asrmEntries(), asrmLast=asrmAll[asrmAll.length-1];
+  const asrmBandNow=asrmLast?asrmBand(asrmLast.q):null;
   const d14=lastN(14).map(dayStats), d7=d14.slice(-7);
   const sleepVals=d7.map(x=>x.sleepH).filter(v=>v!=null);
   const avg7=sleepVals.length?sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length:null;
@@ -1744,7 +1965,12 @@ function renderDash(){
         ? (dbt.observed+" of "+dbt.windowDays+" nights recorded"+
            (dbt.coverage<0.5?" — too sparse to trust":"")+", vs "+dbt.baseline+" h baseline")
         : "no sleep recorded in the window"},
-    {k:"Days over ceiling, 14", v:overDays, s:"/ "+apapDays, d:"days above "+lim.toLocaleString()+" mg"}
+    {k:"Days over ceiling, 14", v:overDays, s:"/ "+apapDays, d:"days above "+lim.toLocaleString()+" mg"},
+    {k:"Mania self-rating", v:asrmLast?asrmLast.q:"—", s:asrmLast?"/ "+ASRM_MAX:"",
+     d: asrmLast
+        ? asrmBandNow.short.toLowerCase()+", taken "+
+          (ago=>ago===0?"today":ago===1?"yesterday":ago+" days ago")(daysBetween(asrmLast.date,iso))
+        : "no score recorded yet — tap 🧭 on the capture screen"}
   ];
 
   document.getElementById("dashBody").innerHTML=
@@ -1763,6 +1989,12 @@ function renderDash(){
       '<div class="s">Days on which each activity was logged at least once — repeats within a day count once. '+
       'Two Fitness items earn STRENGTH; two Rehab items earn REHAB.</div></figcaption>'+
       '<div class="chartbox">'+activityChart(lastN(30))+'</div></figure></div>'+
+    (asrmAll.length
+      ? '<div class="card"><figure><figcaption><div class="t">Mania self-rating, all scores</div>'+
+        '<div class="s">Altman scale, 0–20. Six or more is the published screening threshold — '+
+        'a screen, not a diagnosis. What matters is the shape across several readings, not any one of them.</div>'+
+        '</figcaption><div class="chartbox">'+asrmChart(asrmAll.slice(-24))+'</div></figure></div>'
+      : '')+
     '<div class="card"><figure><figcaption><div class="t">Dots earned, 14 days</div>'+
       '<div class="s">Stacked by category, fixed order — same slots as the board</div></figcaption>'+
       '<div class="chartbox">'+dotChart(lastN(14))+'</div>'+
@@ -1847,6 +2079,40 @@ function arcGauge(pct){
     (v>0?'<path d="'+arc(start,start+span*v,r)+'" fill="none" stroke="'+
       (gold?"var(--sand)":"var(--accent)")+'" stroke-width="7" stroke-linecap="round"/>':'')+
     '</svg>';
+}
+/* ── ASRM OVER TIME ──
+   Scores are irregular by nature — you take one when you think to — so the
+   x-axis is the reading, not the calendar, and each point carries its date.
+   The threshold line at 6 is the only reference that means anything. */
+function asrmChart(rows){
+  const W=640,H=180,mL=30,mR=12,mT=14,mB=30,iw=W-mL-mR,ih=H-mT-mB,max=ASRM_MAX;
+  const y=v=>mT+ih-(v/max)*ih, x=i=>mL+(rows.length===1?iw/2:(i/(rows.length-1))*iw);
+  const g=[0,5,10,15,20].map(v=>'<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+
+    '" stroke="var(--grid)" stroke-width="1"/><text x="'+(mL-7)+'" y="'+(y(v)+3.5).toFixed(1)+
+    '" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">'+v+'</text>').join("");
+  const cut='<rect x="'+mL+'" y="'+mT+'" width="'+iw+'" height="'+(y(ASRM_CUT)-mT).toFixed(1)+
+    '" fill="var(--warn)" opacity=".10"/>'+
+    '<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(ASRM_CUT).toFixed(1)+'" y2="'+y(ASRM_CUT).toFixed(1)+
+    '" stroke="var(--warn)" stroke-width="2" stroke-dasharray="5 4"/>'+
+    '<text x="'+(mL+5)+'" y="'+(y(ASRM_CUT)-5).toFixed(1)+'" text-anchor="start" '+
+    'font-family="var(--mono)" font-size="9" fill="var(--warn)">6 · screening threshold</text>';
+  if(!rows.length) return '<svg class="chart" viewBox="0 0 '+W+' '+H+'">'+g+cut+'<text x="'+(W/2)+'" y="'+
+    (H/2+18)+'" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink-3)">'+
+    'no scores recorded yet</text></svg>';
+  const line=rows.map((r,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(r.q).toFixed(1)).join(" ");
+  const pts=rows.map((r,i)=>{ const last=i===rows.length-1, over=r.q>=ASRM_CUT;
+    return '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(r.q).toFixed(1)+'" r="'+(last?5.5:4.5)+'" fill="'+
+      (over?"var(--warn)":(last?"var(--d-purple)":"var(--surface)"))+'" stroke="'+
+      (over?"var(--warn)":"var(--d-purple)")+'" stroke-width="2"/>'+
+      '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(r.q).toFixed(1)+'" r="12" fill="transparent" data-tip="'+
+      esc(shortDate(r.date))+'|'+r.q+' / '+ASRM_MAX+'|'+esc(asrmBand(r.q).short)+'"/>'; }).join("");
+  const lab=rows.map((r,i)=>(rows.length<8||i%Math.ceil(rows.length/6)===0||i===rows.length-1)
+    ? '<text x="'+x(i).toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle" font-family="var(--mono)" '+
+      'font-size="9" fill="var(--ink-3)">'+esc(shortDate(r.date))+'</text>' : '').join("");
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" '+
+    'aria-label="Altman mania self-rating scores over time, against the threshold of 6">'+
+    g+cut+(rows.length>1?'<path d="'+line+'" fill="none" stroke="var(--d-purple)" stroke-width="2" '+
+    'stroke-linejoin="round" stroke-linecap="round"/>':'')+pts+lab+'</svg>';
 }
 /* ── WHAT ACTUALLY GETS DONE ──
    Days-with-at-least-one, not raw entry count: logging ankle pumps four times
@@ -2156,9 +2422,13 @@ async function buildShareLink(withNotes){
   for(const [k,v] of Object.entries(state.daily)){
     const c=Object.assign({},v); if(!withNotes) delete c.note; daily[k]=c;
   }
+  /* A mania screening score goes to the clinical link and not the family one.
+     Family links already strip written notes; a psychiatric screening result
+     belongs in the same category, so those rows are absent rather than hidden. */
+  const ent = withNotes ? state.entries : state.entries.filter(x=>x.id!=="asrm");
   const payload={
     v:1, mode: withNotes?"clinical":"family", ts: todayISO(),
-    e: state.entries.map(x=>[x.date,x.time,x.id,x.q, withNotes?(x.note||""):""]),
+    e: ent.map(x=>[x.date,x.time,x.id,x.q, withNotes?(x.note||""):""]),
     daily, done: state.done, board: state.board,
     settings:{apapTab:state.settings.apapTab, apapLimit:state.settings.apapLimit,
               timeUnit:state.settings.timeUnit}
@@ -2174,12 +2444,12 @@ function openShare(){
       '<button class="unitrow" data-share="clinical"><span class="uv">🩺</span>'+
         '<span class="ul"><b>Clinical</b><span>everything, notes included</span></span></button>'+
       '<button class="unitrow" data-share="family"><span class="uv">👨‍👩‍👧</span>'+
-        '<span class="ul"><b>Family</b><span>doses and progress, notes removed</span></span></button>'+
+        '<span class="ul"><b>Family</b><span>doses and progress, notes and mania scores removed</span></span></button>'+
     '</div>'+
     '<p style="font-size:12.5px;color:var(--ink-2);margin:14px 0 0">You have '+notes+
     ' entries carrying personal notes — the AAC assessment, the calls with Cassidy and Kate, '+
     'the talks with your parents. The clinical link includes them. The family link builds without them, '+
-    'so they are not in the link at all.</p>'+
+    'so they are not in the link at all — and mania self-ratings are left out of the family link entirely.</p>'+
     '<div class="alert" style="margin-top:13px"><b>Anyone with the link can read it</b>'+
     'The snapshot is inside the link itself, so treat it like the record. Send it directly rather than '+
     'posting it anywhere public, and send a fresh one when you want them to see newer days.</div>'+

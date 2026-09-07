@@ -205,6 +205,7 @@ function renderDash(){
   const maxApap=Math.max(...d14.map(x=>x.apap));
   const overDays=d14.filter(x=>x.apap>lim).length, apapDays=d14.filter(x=>x.apap>0).length;
   const ph=phaseOn(iso), r=remaining();
+  const asrmAll=asrmEntries(), asrmLast=asrmAll[asrmAll.length-1];
 
   const tiles=[
     {k:"Days post-op", v:daysBetween(INJURY,iso), s:"", d:"Femur fractured "+longDate(INJURY)},
@@ -217,6 +218,8 @@ function renderDash(){
     {k:"Adherence, 7 days", v:lastN(7).reduce((a,d)=>a+dayMeta(d).earnedLive.length,0),
      s:"/ "+lastN(7).filter(d=>d>=INJURY&&d<=iso).reduce((a,d)=>a+dayMeta(d).live.length,0), d:"habit dots earned"}
   ];
+  if(asrmLast) tiles.push({k:"Mania self-rating", v:asrmLast.q, s:"/ "+ASRM_MAX,
+    d: asrmBand(asrmLast.q).short.toLowerCase()+" · "+longDate(asrmLast.date)});
 
   const meds=medSummary(7);
   const medRows = meds.length ? meds.map(m=>
@@ -328,6 +331,12 @@ function renderDash(){
     '<div class="tiles">'+tiles.map(t=>'<div class="stat"><span class="k">'+esc(t.k)+'</span>'+
       '<div class="v">'+esc(String(t.v))+(t.s?' <small>'+esc(t.s)+'</small>':'')+'</div>'+
       '<div class="d">'+esc(t.d)+'</div></div>').join("")+'</div>'+
+    (asrmAll.length
+      ? '<div class="card"><figure><figcaption><div class="t">Mania self-rating (Altman), all scores</div>'+
+        '<div class="s">Self-administered, 0–20. Six or more is the published screening threshold '+
+        '(85.5% sensitivity, 87.3% specificity for mania). A screen, not a diagnosis.</div></figcaption>'+
+        '<div class="chartbox">'+asrmChart(asrmAll.slice(-24))+'</div></figure></div>'
+      : '')+
     '<div class="card"><figure><figcaption><div class="t">Daily acetaminophen, 14 days</div>'+
       '<div class="s">Dashed line is the '+lim.toLocaleString()+' mg daily ceiling</div></figcaption>'+
       '<div class="chartbox">'+apapChart(d14,lim)+'</div>'+
