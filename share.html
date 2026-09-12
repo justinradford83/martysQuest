@@ -646,10 +646,11 @@ const KEY    = "mq_recovery_v3";
    what makes the dots readable without relying on colour.
    The rules below are the Sep 2026 revision: REHAB and STRENGTH are now
    *counting* rules over their capture sections rather than per-item tags, so
-   no single item can carry a dot on its own (the rings workout excepted). */
+   no single item can carry a dot on its own — except the two that are whole
+   prescribed programmes in themselves: the rings workout and the PhysiApp set. */
 const DOTS = [
   {id:"green", slot:0, letter:"R", name:"REHAB",     v:"--d-green",
-   earns:"Any 2 items from the Rehab section.",
+   earns:"Any 2 items from the Rehab section — or the PhysiApp programme on its own.",
    fallback:"Hip / knee ROM plus a crutch walk — ten minutes total"},
   {id:"blue",  slot:1, letter:"Z", name:"RECOVER",   v:"--d-blue",
    earns:"More than 6 hours of sleep — or a nap of 15 minutes or more.",
@@ -799,7 +800,7 @@ const GROUPS = [
   {id:"fit",   label:"Fitness",                 color:"var(--d-red)",
    note:"Any two of these earns STRENGTH. The full rings workout earns it on its own."},
   {id:"rehab", label:"Rehab",                   color:"var(--d-green)",
-   note:"Any two of these earns REHAB."},
+   note:"Any two of these earns REHAB. The PhysiApp programme earns it on its own."},
   {id:"body",  label:"Body & care",             color:"var(--ink-3)",
    note:"Sleep over 6 h — or a nap of 15 minutes — earns RECOVER. Breathwork, journalling or mental therapy earns SPIRITUAL."},
   {id:"care",  label:"Appointments & wound care", color:"var(--sand)"},
@@ -861,6 +862,7 @@ const CATALOG = [
   {id:"cardio", em:"🫀",   name:"Cardio",                  common:"wheelchair · walking · bike", dose:"—", unit:"min", q:20, g:"fit", fx:"Aerobic base", also:"orange"},
 
   /* ── REHAB — any two earns REHAB ── */
+  {id:"physiapp",em:"📱",  name:"PhysiApp exercises",      common:"the prescribed programme", dose:"—", unit:"session", q:1, g:"rehab", fx:"Prescribed rehab", dot:"green"},
   {id:"physio", em:"🧑‍⚕️", name:"Physiotherapy",           common:"session", dose:"—", unit:"session", q:1, g:"rehab", fx:"Rehab"},
   {id:"mobil",  em:"🤸",   name:"Hip / knee ROM",          common:"range of motion work", dose:"—", unit:"min", q:15, g:"rehab", fx:"Range of motion"},
   {id:"gait",   em:"👣",   name:"Gait training",           common:"—", dose:"—", unit:"min", q:10, g:"rehab", fx:"Gait & hip stability"},
