@@ -829,11 +829,11 @@ const CATALOG = [
   {id:"asa",    em:"🩸",   name:"Acetylsalicylic acid",    common:"ASA · “blood thinner”", dose:"81–325 mg", unit:"tab", q:1, g:"clot", fx:"Blood thinner", retired:true},
   {id:"lmwh",   em:"💉",   name:"Enoxaparin",              common:"Lovenox injection", dose:"per Rx", unit:"inj", q:1, g:"clot", fx:"Blood thinner", retired:true},
 
-  {id:"quet100",em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"100 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health"},
+  {id:"quet100",em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"100 mg tablets", unit:"mg", q:100, step:50, g:"sleep", fx:"Sleep / mental health"},
   {id:"melat",  em:"🌛",   name:"Melatonin",               common:"gummy", dose:"5 mg", unit:"gummy", q:1, g:"sleep", fx:"Sleep onset"},
   {id:"mag",    em:"🧲",   name:"Magnesium",               common:"bisglycinate", dose:"—", unit:"cap", q:2, g:"sleep", fx:"Sleep / muscle relax"},
   {id:"winddown",em:"🕯️", name:"Wind-down routine",       common:"phone out, lights down", dose:"—", unit:"", q:1, g:"sleep", fx:"Sleep hygiene"},
-  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"25 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health", retired:true},
+  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · earlier 25 mg Rx", dose:"25 mg tablets", unit:"mg", q:25, step:25, g:"sleep", fx:"Sleep / mental health", retired:true},
   {id:"gravol", em:"😵‍💫",  name:"Dimenhydrinate",          common:"Gravol", dose:"50 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep aid / nausea", retired:true},
   {id:"sleepez",em:"💤",   name:"Dimenhydrinate gel",      common:"Sleep-EZ", dose:"25 mg", unit:"gel", q:1, g:"sleep", fx:"Sleep aid", retired:true},
 
@@ -907,7 +907,7 @@ const REHAB_IDS = new Set(CATALOG.filter(c=>c.g==="rehab").map(c=>c.id));
 const STACKS = [
   {id:"morn", em:"🌅", label:"Morning stack", items:[["lamo",1],["vitd",2],["htp",1],["omega",1],["vitc",1]]},
   {id:"aft",  em:"🌤", label:"Afternoon",     items:[["apap",2],["vitstack",1]]},
-  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",1],["lamo",1],["mag",2],["melat",1]]},
+  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",100],["lamo",1],["mag",2],["melat",1]]},
   {id:"fall", em:"⏱️", label:"Two-minute fallback", items:[["mobil",5],["breath",3]]},
   {id:"brk",  em:"⚡", label:"Breakthrough",  items:[["apap",2]]}
 ];
@@ -991,6 +991,12 @@ const SEED_DAILY = {
 };
 
 /* ════════ STATE ════════ */
+/* Quetiapine used to be counted in tablets so that a dose read "1 tab"; it is
+   counted in milligrams now, so the stepper can move in 50 mg steps. Stored
+   rows are converted once, each at the strength it was recorded at, so the
+   ledger keeps saying exactly what it said before — 2 × 25 mg becomes 50 mg. */
+const QUET_MG = {quet100:100, quet:25};
+
 /* Renamed checklist items, old text → new. `done` is keyed by the text itself,
    so a rename would otherwise silently untick something already finished. */
 const DONE_RENAMES = {
@@ -1025,15 +1031,19 @@ function migrate(o){
   o.settings.timeUnit ||= "days";
   o.settings.baselineNeed ??= 6.5;   /* keep in step with sleepdebt/config.yaml */
   o.settings.debtWindow  ??= 14;
+  if(!o.settings.quetMg){
+    o.entries.forEach(e=>{ const mg=QUET_MG[e.id]; if(mg) e.q = Math.round(e.q*mg); });
+    o.settings.quetMg = true;
+  }
   return o;
 }
 function seedState(){
-  return {
+  return migrate({
     entries: SEED_ENTRIES.map((e,i)=>({uid:"s"+i, ...e})),
     daily: JSON.parse(JSON.stringify(SEED_DAILY)),
     done:{}, board:{}, bench:{},
     settings:{apapTab:500, apapLimit:4000, theme:null, timeUnit:"days", baselineNeed:6.5, debtWindow:14}
-  };
+  });
 }
 function save(){
   if(LOAD_ERROR) return;   /* never overwrite data we failed to read */
@@ -1495,7 +1505,8 @@ function showASRMResult(uid){
 function openStack(st){
   showSheet('<h3>'+st.em+' '+esc(st.label)+'</h3><p class="sh-sub">Logs all of these at one time</p>'+
     '<div class="card" style="margin-bottom:13px;font-size:13.5px;line-height:1.8">'+
-      st.items.map(([id,q])=>BY_ID[id].em+" "+esc(BY_ID[id].name)+" × "+q).join("<br>")+'</div>'+
+      st.items.map(([id,q])=>BY_ID[id].em+" "+esc(BY_ID[id].name)+" × "+
+        esc(fmtQty(q, BY_ID[id].unit))).join("<br>")+'</div>'+
     '<div class="row2"><div class="field"><label>Date</label><input type="date" id="d" value="'+todayISO()+'"></div>'+
     '<div class="field"><label>Time</label><input type="time" id="t" value="'+nowHM()+'"></div></div>'+
     '<div class="field"><label>Notes</label><textarea id="n"></textarea></div>'+

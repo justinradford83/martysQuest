@@ -828,11 +828,11 @@ const CATALOG = [
   {id:"asa",    em:"🩸",   name:"Acetylsalicylic acid",    common:"ASA · “blood thinner”", dose:"81–325 mg", unit:"tab", q:1, g:"clot", fx:"Blood thinner", retired:true},
   {id:"lmwh",   em:"💉",   name:"Enoxaparin",              common:"Lovenox injection", dose:"per Rx", unit:"inj", q:1, g:"clot", fx:"Blood thinner", retired:true},
 
-  {id:"quet100",em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"100 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health"},
+  {id:"quet100",em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"100 mg tablets", unit:"mg", q:100, step:50, g:"sleep", fx:"Sleep / mental health"},
   {id:"melat",  em:"🌛",   name:"Melatonin",               common:"gummy", dose:"5 mg", unit:"gummy", q:1, g:"sleep", fx:"Sleep onset"},
   {id:"mag",    em:"🧲",   name:"Magnesium",               common:"bisglycinate", dose:"—", unit:"cap", q:2, g:"sleep", fx:"Sleep / muscle relax"},
   {id:"winddown",em:"🕯️", name:"Wind-down routine",       common:"phone out, lights down", dose:"—", unit:"", q:1, g:"sleep", fx:"Sleep hygiene"},
-  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · Rx Dr Cameron", dose:"25 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep / mental health", retired:true},
+  {id:"quet",   em:"🌙",   name:"Quetiapine",              common:"Seroquel · earlier 25 mg Rx", dose:"25 mg tablets", unit:"mg", q:25, step:25, g:"sleep", fx:"Sleep / mental health", retired:true},
   {id:"gravol", em:"😵‍💫",  name:"Dimenhydrinate",          common:"Gravol", dose:"50 mg", unit:"tab", q:1, g:"sleep", fx:"Sleep aid / nausea", retired:true},
   {id:"sleepez",em:"💤",   name:"Dimenhydrinate gel",      common:"Sleep-EZ", dose:"25 mg", unit:"gel", q:1, g:"sleep", fx:"Sleep aid", retired:true},
 
@@ -906,7 +906,7 @@ const REHAB_IDS = new Set(CATALOG.filter(c=>c.g==="rehab").map(c=>c.id));
 const STACKS = [
   {id:"morn", em:"🌅", label:"Morning stack", items:[["lamo",1],["vitd",2],["htp",1],["omega",1],["vitc",1]]},
   {id:"aft",  em:"🌤", label:"Afternoon",     items:[["apap",2],["vitstack",1]]},
-  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",1],["lamo",1],["mag",2],["melat",1]]},
+  {id:"bed",  em:"🌙", label:"Bedtime",       items:[["quet100",100],["lamo",1],["mag",2],["melat",1]]},
   {id:"fall", em:"⏱️", label:"Two-minute fallback", items:[["mobil",5],["breath",3]]},
   {id:"brk",  em:"⚡", label:"Breakthrough",  items:[["apap",2]]}
 ];
